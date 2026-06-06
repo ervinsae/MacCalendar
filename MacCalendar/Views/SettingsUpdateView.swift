@@ -5,22 +5,23 @@
 //  Created by ruihelin on 2026/4/28.
 //
 
+
 import SwiftUI
 import AppKit
 
-enum UpdateAlertType {
+enum UpdateStatus {
+    case idle
     case checking
     case noUpdate
-    case updateAvailable(String)
     case downloading
     case downloadComplete
     case error(String)
 }
 
 struct SettingsUpdateView: View {
-    private var updateManager: UpdateManager { UpdateManager.shared }
-    @State private var showAlert = false
-    @State private var alertType: UpdateAlertType = .checking
+    @ObservedObject private var updateManager = UpdateManager.shared
+    @State private var updateStatus: UpdateStatus = .idle
+    @State private var statusMessage: String = ""
     
     var body: some View {
         Form {
@@ -48,61 +49,130 @@ struct SettingsUpdateView: View {
                     .disabled(updateManager.isChecking || updateManager.isDownloading)
                 }
             }
+            
+            Section {
+                Group {
+                    switch updateStatus {
+                    case .idle:
+                        EmptyView()
+                    case .downloading:
+                        HStack(spacing: 12) {
+                            Text("下载中")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            ProgressView(value: updateManager.downloadProgress)
+                                .progressViewStyle(.linear)
+                                .frame(width: 200)
+                            
+                            Text(String(format: "%.1f%%", updateManager.downloadProgress * 100))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .frame(width: 50, alignment: .trailing)
+                            
+                            Button(action: {
+                                cancelDownload()
+                            }) {
+                                Text("取消")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                        .padding(8)
+                    default:
+                        HStack(alignment: .center, spacing: 12) {
+                            Image(systemName: statusIcon)
+                                .font(.system(size: 24))
+                                .foregroundColor(statusColor)
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(statusTitle)
+                                    .font(.headline)
+                                
+                                if !statusMessage.isEmpty {
+                                    Text(statusMessage)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(16)
+                    }
+                }
+            }
         }
         .formStyle(.grouped)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .sheet(isPresented: $showAlert) {
-            UpdateAlertView(
-                updateManager: updateManager,
-                type: alertType,
-                onAction: handleAlertAction,
-                onDismiss: { showAlert = false }
-            )
+    }
+    
+    private var statusIcon: String {
+        switch updateStatus {
+        case .idle: return "info.circle"
+        case .checking: return "magnifyingglass"
+        case .noUpdate: return "checkmark.circle"
+        case .downloading: return "arrow.down.circle"
+        case .downloadComplete: return "checkmark.circle"
+        case .error: return "xmark.circle"
         }
     }
     
-    private func handleAlertAction() {
-        switch alertType {
-        case .updateAvailable:
-            downloadAndInstallUpdate()
-        case .downloadComplete, .error, .noUpdate:
-            showAlert = false
-        default:
-            break
+    private var statusColor: Color {
+        switch updateStatus {
+        case .idle: return .secondary
+        case .checking: return .blue
+        case .noUpdate: return .green
+        case .downloading: return .blue
+        case .downloadComplete: return .green
+        case .error: return .red
+        }
+    }
+    
+    private var statusTitle: String {
+        switch updateStatus {
+        case .idle: return "点击上方按钮检查更新"
+        case .checking: return "检查更新中..."
+        case .noUpdate: return "已经是最新版本"
+        case .downloading: return "正在下载..."
+        case .downloadComplete: return "下载完成"
+        case .error(let error): return "错误: \(error)"
         }
     }
     
     private func checkForUpdates() {
-        alertType = .checking
-        showAlert = true
+        updateStatus = .checking
+        statusMessage = ""
         
         Task {
             await updateManager.checkForUpdates()
             
             await MainActor.run {
-                if updateManager.updateAvailable, let version = updateManager.latestVersion {
-                    alertType = .updateAvailable(version)
+                if updateManager.updateAvailable {
+                    downloadAndInstallUpdate()
                 } else if let error = updateManager.downloadError {
-                    alertType = .error(error)
+                    updateStatus = .error(error)
                 } else {
-                    alertType = .noUpdate
+                    updateStatus = .noUpdate
                 }
             }
         }
     }
     
     private func downloadAndInstallUpdate() {
-        alertType = .downloading
+        updateStatus = .downloading
+        statusMessage = "请稍候，正在下载更新包..."
+        
         updateManager.downloadUpdate { dmgURL, error in
             DispatchQueue.main.async {
                 if let dmgURL = dmgURL {
-                    self.alertType = .downloadComplete
+                    self.updateStatus = .downloadComplete
+                    self.statusMessage = "正在挂载安装包..."
                     
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         self.installUpdate(from: dmgURL)
                     }
                 } else if let error = error {
-                    self.alertType = .error(error.localizedDescription)
+                    self.updateStatus = .error(error.localizedDescription)
                 }
             }
         }
@@ -111,10 +181,20 @@ struct SettingsUpdateView: View {
     private func installUpdate(from dmgURL: URL) {
         updateManager.installUpdate(from: dmgURL) { success, errorMessage in
             DispatchQueue.main.async {
-                if !success {
-                    self.alertType = .error(errorMessage ?? "安装失败")
+                if success {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        NSApplication.shared.terminate(nil)
+                    }
+                } else {
+                    self.updateStatus = .error(errorMessage ?? "挂载失败")
                 }
             }
         }
+    }
+    
+    private func cancelDownload() {
+        updateManager.cancelDownload()
+        updateStatus = .idle
+        statusMessage = ""
     }
 }
