@@ -8,9 +8,14 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @State private var selection: SettingsType = .customized
+    @State private var selection: SettingsType
     @ObservedObject var calendarManager: CalendarManager
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = SettingsManager.appearanceMode
+
+    init(calendarManager: CalendarManager, initialSelection: SettingsType = .customized) {
+        self.calendarManager = calendarManager
+        self._selection = State(initialValue: initialSelection)
+    }
     
     var body: some View {
         NavigationSplitView {

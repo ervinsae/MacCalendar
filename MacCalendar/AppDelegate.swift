@@ -11,28 +11,29 @@ import Combine
 
 class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
     static var shared:AppDelegate?
-    
+
     var statusItem: NSStatusItem!
     var popover: NSPopover!
     var settingsWindow: NSWindow?
     var eventEditWindow:NSWindow?
     var hostingController: NSHostingController<AnyView>?
     lazy var calendarManager: CalendarManager = CalendarManager()
-    
+
     private var resizeWorkItem:DispatchWorkItem?
+    private var preferredPopoverSize: CGSize = .zero
     private var calendarIcon = CalendarIcon()
     private var cancellables = Set<AnyCancellable>()
     private var isPopoverAnimating = false
-    
+
     private var appearanceObserver: NSObjectProtocol?
-    
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
-        
+
         _ = calendarManager
-        
+
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        
+
         if let button = statusItem.button {
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
             button.action = #selector(statusItemClicked)
@@ -51,7 +52,7 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
                 button.image = image
             }
         }
-        
+
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.modifierFlags.contains(.command) && event.characters == "," {
                 self?.showSettingsWindow()
@@ -59,28 +60,28 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
             }
             return event
         }
-        
+
         calendarIcon.$displayOutput
             .receive(on: DispatchQueue.main)
             .sink { [weak self] output in
                 guard let self = self, let button = self.statusItem.button else { return }
-                
+
                 // 移除之前添加的自定义子视图
                 button.subviews.forEach { subview in
                     if subview is DoubleLineStatusView {
                         subview.removeFromSuperview()
                     }
                 }
-                
+
                 if output == "" {
                     // 图标模式：根据当前日期显示对应日期的符号
                     button.title = ""
                     button.attributedTitle = NSAttributedString(string: "")
-                    
+
                     let day = Calendar.current.component(.day, from: Date())
                     let symbolName = "\(day).calendar"
                     let config = NSImage.SymbolConfiguration(pointSize: 18, weight: .regular)
-                    
+
                     if let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Calendar")?.withSymbolConfiguration(config) {
                         image.isTemplate = true
                         button.image = image
@@ -97,28 +98,28 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
                     let lines = output.components(separatedBy: "\n")
                     let topText = lines.count > 0 ? lines[0] : ""
                     let bottomText = lines.count > 1 ? lines[1] : ""
-                    
+
                     // 创建双行视图（不处理点击，由按钮本身处理）
                     let doubleLineView = DoubleLineStatusView(topText: topText, bottomText: bottomText)
-                    
+
                     // 清空按钮内容
                     button.image = nil
                     button.title = ""
                     button.attributedTitle = NSAttributedString(string: "")
-                    
+
                     // 设置按钮尺寸
                     self.statusItem.length = doubleLineView.frame.width
-                    
+
                     // 设置视图位置，两行居中显示（两行边界在中间）
                     let centerY = (button.bounds.height - doubleLineView.frame.height) / 2
                     doubleLineView.frame.origin = NSPoint(
                         x: (button.bounds.width - doubleLineView.frame.width) / 2,
                         y: centerY
                     )
-                    
+
                     // 添加到按钮（按钮本身处理点击）
                     button.addSubview(doubleLineView)
-                    
+
                 } else {
                     // 单行显示
                     button.image = nil
@@ -126,37 +127,45 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
                     button.title = output
                     self.statusItem.length = NSStatusItem.variableLength
                 }
-                
+
                 button.sizeToFit()
             }
             .store(in: &cancellables)
-        
+
         // 立即更新显示
         calendarIcon.updateDisplayOutput()
-        
+
         popover = NSPopover()
         popover.behavior = .transient
-        
+
         let contentView = ContentView(calendarManager: self.calendarManager)
             .onPreferenceChange(SizeKey.self){ size in
                 guard size != .zero else { return }
-                
+
                 self.resizeWorkItem?.cancel()
-                
+
+                self.preferredPopoverSize = size
+
                 let workItem = DispatchWorkItem{
-                    guard self.popover.isShown else { return }
-                    self.popover.contentSize = size
+                    self.applyPopoverSize(size)
                 }
-                
+
                 self.resizeWorkItem = workItem
                 // 延迟80ms执行
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.08, execute: workItem)
             }
         hostingController = NSHostingController(rootView: AnyView(contentView))
+        preferredPopoverSize = ContentView.preferredSize(calendarManager: self.calendarManager)
+        applyPopoverSize(preferredPopoverSize)
+        if let contentHostView = hostingController?.view {
+            contentHostView.wantsLayer = true
+            contentHostView.layer?.cornerRadius = ItsycalPalette.popoverCornerRadius
+            contentHostView.layer?.masksToBounds = true
+        }
         popover.contentViewController = hostingController
-        
+
         updateAppearance()
-        
+
         // 监听外观设置变化
         appearanceObserver = NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification,
@@ -165,24 +174,31 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
         ) { [weak self] _ in
             self?.updateAppearance()
         }
-        
+
         NotificationCenter.default.addObserver(self, selector: #selector(closePopover), name: NSApplication.didResignActiveNotification, object: nil)
     }
-    
+
+    private func applyPopoverSize(_ size: CGSize) {
+        guard size != .zero else { return }
+        preferredPopoverSize = size
+        popover.contentSize = size
+        hostingController?.view.setFrameSize(size)
+    }
+
     private func updateAppearance() {
         let mode = SettingsManager.appearanceMode
         popover.appearance = mode.nsAppearance
         settingsWindow?.appearance = mode.nsAppearance
         eventEditWindow?.appearance = mode.nsAppearance
     }
-    
+
     @objc func statusItemClicked(sender: NSStatusBarButton) {
         handleStatusItemClick()
     }
-    
+
     @objc func handleStatusItemClick() {
         guard let event = NSApp.currentEvent else { return }
-        
+
         if event.type == .rightMouseUp {
             let menu = NSMenu()
             let settingsItem = NSMenuItem(title: "偏好设置...", action: #selector(showSettingsWindow), keyEquivalent: ",")
@@ -195,7 +211,7 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
             menu.addItem(openCalendarItem)
             menu.addItem(NSMenuItem.separator())
             menu.addItem(NSMenuItem(title: "退出", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
-            
+
             statusItem.menu = menu
             statusItem.button?.performClick(nil)
             statusItem.menu = nil
@@ -203,30 +219,39 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
             togglePopover()
         }
     }
-    
+
     @objc func openSystemCalendar(_ sender: NSMenuItem) {
+        openSystemCalendar()
+    }
+
+    func openSystemCalendar() {
+        closePopover()
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.iCal") {
             NSWorkspace.shared.open(url)
         }
     }
-    
+
     @objc func togglePopover() {
         guard let button = statusItem.button else { return }
-        
+
         if isPopoverAnimating {
             return
         }
-        
+
         if popover.isShown {
             popover.performClose(nil)
         } else {
             isPopoverAnimating = true
-            
+
             calendarManager.resetToToday()
-            
+
             NSApp.activate(ignoringOtherApps: true)
-            
+
             DispatchQueue.main.async {
+                let targetSize = self.preferredPopoverSize == .zero
+                    ? ContentView.preferredSize(calendarManager: self.calendarManager)
+                    : self.preferredPopoverSize
+                self.applyPopoverSize(targetSize)
                 self.popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     self.isPopoverAnimating = false
@@ -234,64 +259,103 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
             }
         }
     }
-    
+
     @objc func closePopover() {
         popover.performClose(nil)
     }
-    
+
     @objc func showSettingsWindow() {
-        if settingsWindow == nil {
-            let settingsView = SettingsView(calendarManager: self.calendarManager)
-                .environmentObject(self.calendarManager)
-            
-            let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 620, height: 450),
-                styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
-                backing: .buffered,
-                defer: false
-            )
-            window.title = "偏好设置"
-            window.center()
-            window.isReleasedWhenClosed = false
-            window.contentView = NSHostingView(rootView: settingsView)
-            settingsWindow = window
+        showSettingsWindowWithSelection(.customized)
+    }
+
+    func showSettingsWindowWithSelection(_ selection: SettingsType) {
+        closePopover()
+
+        if let existingWindow = settingsWindow {
+            existingWindow.close()
+            settingsWindow = nil
         }
-        
+
+        let settingsView = SettingsView(calendarManager: self.calendarManager, initialSelection: selection)
+            .environmentObject(self.calendarManager)
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 620, height: 450),
+            styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "偏好设置"
+        window.center()
+        window.isReleasedWhenClosed = false
+        window.contentView = NSHostingView(rootView: settingsView)
+        settingsWindow = window
+
         updateAppearance()
         settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         settingsWindow?.orderFrontRegardless()
     }
-    
+
+    func openNewEventWindow() {
+        closePopover()
+        openEventEditWindow(event: makeNewEvent())
+    }
+
+    private func makeNewEvent() -> CalendarEvent {
+        let calendar = Calendar.Based
+        let selectedDay = calendar.startOfDay(for: calendarManager.selectedDay)
+        let nowComponents = calendar.dateComponents([.hour], from: Date())
+        let startHour = nowComponents.hour ?? 9
+        let startDate = calendar.date(bySettingHour: startHour, minute: 0, second: 0, of: selectedDay) ?? selectedDay
+        let endDate = calendar.date(byAdding: .hour, value: 1, to: startDate) ?? startDate
+
+        return CalendarEvent(
+            id: "new-event-\(UUID().uuidString)",
+            calendar_title: nil,
+            allowsModify: true,
+            title: "",
+            location: nil,
+            isAllDay: false,
+            startDate: startDate,
+            endDate: endDate,
+            color: CodableColor(color: Color(nsColor: .systemBlue)),
+            notes: nil,
+            url: nil,
+            organizer: nil,
+            attendees: nil
+        )
+    }
+
     func openEventEditWindow(event: CalendarEvent) {
         if let existingWindow = eventEditWindow, existingWindow.isVisible {
             existingWindow.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
-        
+
         let contentView = EventEditView(event: event).environmentObject(calendarManager)
-        
+
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
-        
+
         window.delegate = self
-        window.title = "编辑事件"
+        window.title = event.id.hasPrefix("new-event-") ? "新增事件" : "编辑事件"
         window.center()
         window.isReleasedWhenClosed = false
-        
+
         window.contentView = NSHostingView(rootView: contentView)
         window.makeKeyAndOrderFront(nil)
-        
+
         NSApp.activate(ignoringOtherApps: true)
-        
+
         self.eventEditWindow = window
     }
-    
+
     func windowWillClose(_ notification: Notification) {
         if let window = notification.object as? NSWindow {
             if window == settingsWindow {
@@ -306,12 +370,12 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
 
 // 双行显示的自定义状态栏视图
 class DoubleLineStatusView: NSView {
-    
+
     init(topText: String, bottomText: String) {
         super.init(frame: .zero)
-        
+
         wantsLayer = true
-        
+
         // 上行标签
         let topLabel = NSTextField()
         topLabel.stringValue = topText
@@ -321,7 +385,7 @@ class DoubleLineStatusView: NSView {
         topLabel.isBordered = false
         topLabel.drawsBackground = false
         topLabel.sizeToFit()
-        
+
         // 下行标签
         let bottomLabel = NSTextField()
         bottomLabel.stringValue = bottomText
@@ -331,13 +395,13 @@ class DoubleLineStatusView: NSView {
         bottomLabel.isBordered = false
         bottomLabel.drawsBackground = false
         bottomLabel.sizeToFit()
-        
+
         // 计算尺寸（紧凑布局，根据内容动态调整）
         let width = max(topLabel.frame.width, bottomLabel.frame.width)
         let height = topLabel.frame.height + bottomLabel.frame.height
-        
+
         self.frame = NSRect(x: 0, y: 0, width: width, height: height)
-        
+
         // 布局标签（两行紧密排列，无间距）
         topLabel.frame = NSRect(
             x: (width - topLabel.frame.width) / 2,
@@ -345,22 +409,22 @@ class DoubleLineStatusView: NSView {
             width: topLabel.frame.width,
             height: topLabel.frame.height
         )
-        
+
         bottomLabel.frame = NSRect(
             x: (width - bottomLabel.frame.width) / 2,
             y: 0,
             width: bottomLabel.frame.width,
             height: bottomLabel.frame.height
         )
-        
+
         addSubview(topLabel)
         addSubview(bottomLabel)
     }
-    
+
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
+
     // 让鼠标事件传递给父视图（按钮）
     override func hitTest(_ point: NSPoint) -> NSView? {
         return nil

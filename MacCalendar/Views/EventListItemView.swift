@@ -8,62 +8,103 @@
 import SwiftUI
 
 struct EventListItemView: View {
-    let event:CalendarEvent
-    
-    @State private var selectedEventId:String? = nil
-    
-    var body: some View {
-        HStack {
-            VStack(spacing:2){
-                if event.isAllDay{
-                    Text("全天")
-                }
-                else{
-                    Text(event.startDate, style: .time)
-                    Divider()
-                        .frame(width:30)
-                    Text(event.endDate, style: .time)
-                }
-            }
-            .font(.system(size: 10))
-            .frame(width:30)
-            
-            HStack(spacing:0){
-                Rectangle()
-                    .cornerRadius(3)
-                    .frame(width: 3)
-                    .foregroundStyle(event.color.color.opacity(0.5))
-                VStack{
-                    Text(event.title)
-                        .font(.system(size: 12))
-                        .frame(maxWidth:.infinity,alignment: .leading)
-                        .lineLimit(1)
-                    Text(event.notes ?? "")
-                        .font(.caption2)
-                        .frame(maxWidth:.infinity,alignment: .leading)
-                        .lineLimit(1)
-                }
-                .frame(maxWidth:.infinity,alignment: .leading)
-                .padding(.init(top: 5, leading: 5, bottom: 5, trailing: 5))
-                .background(
-                    LinearGradient(
-                        gradient: Gradient(colors: [event.color.color.opacity(0.2),event.color.color.opacity(0.1)]),
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-            }
-            .cornerRadius(5)
+    let event: CalendarEvent
+
+    @State private var selectedEventId: String? = nil
+    @State private var suppressNextOpenUntil: Date? = nil
+
+    private var timeText: String {
+        if event.isAllDay {
+            return "全天"
         }
-        .padding([.top,.bottom],2)
+
+        return "\(DateHelper.formatDate(date: event.startDate, format: "HH:mm")) – \(DateHelper.formatDate(date: event.endDate, format: "HH:mm"))"
+    }
+
+    private var subtitleText: String? {
+        let location = event.location?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return location.isEmpty ? nil : location
+    }
+
+    private var isPastEvent: Bool {
+        if event.isAllDay {
+            return event.endDate < Calendar.Based.startOfDay(for: Date())
+        }
+        return event.endDate < Date()
+    }
+
+    private var titleColor: Color {
+        isPastEvent ? ItsycalPalette.secondaryText : ItsycalPalette.primaryText
+    }
+
+    private var detailColor: Color {
+        isPastEvent ? ItsycalPalette.secondaryText.opacity(0.78) : ItsycalPalette.secondaryText
+    }
+
+    private var dotColor: Color {
+        isPastEvent ? ItsycalPalette.secondaryText.opacity(0.45) : event.color.color
+    }
+
+    private func handleTap() {
+        if selectedEventId == event.id {
+            suppressNextOpenUntil = nil
+            selectedEventId = nil
+            return
+        }
+
+        if let suppressNextOpenUntil, suppressNextOpenUntil > Date() {
+            self.suppressNextOpenUntil = nil
+            return
+        }
+
+        selectedEventId = event.id
+    }
+
+    private func markDismissedByPopoverIfNeeded() {
+        if selectedEventId == event.id {
+            suppressNextOpenUntil = Date().addingTimeInterval(0.35)
+        }
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 6) {
+            Circle()
+                .fill(dotColor)
+                .frame(width: 6, height: 6)
+                .padding(.top, 3)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(event.title)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(titleColor)
+                    .lineLimit(1)
+
+                if let subtitleText {
+                    Text(subtitleText)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(detailColor)
+                        .lineLimit(1)
+                }
+
+                Text(timeText)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(detailColor)
+                    .monospacedDigit()
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, 0)
+        .contentShape(Rectangle())
         .onTapGesture {
-            selectedEventId = event.id
+            handleTap()
         }
         .popover(
             isPresented: Binding(
                 get: { selectedEventId == event.id },
                 set: { isPresented in
                     if !isPresented {
+                        markDismissedByPopoverIfNeeded()
                         selectedEventId = nil
                     }
                 }

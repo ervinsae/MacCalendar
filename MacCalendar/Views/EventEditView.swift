@@ -111,11 +111,16 @@ struct EventEditView: View {
                     Button("保存") {
                         Task {
                             do {
-                                try await calendarManager.updateEvent(event: editedEvent)
+                                if event.id.hasPrefix("new-event-") {
+                                    try await calendarManager.createEvent(event: editedEvent)
+                                } else {
+                                    try await calendarManager.updateEvent(event: editedEvent)
+                                }
                                 self.alertInfo = AlertInfo(
                                     title: "保存成功",
-                                    message: "修改已成功保存。",
+                                    message: event.id.hasPrefix("new-event-") ? "日程已成功创建。" : "修改已成功保存。",
                                     onDismiss: {
+                                        AppDelegate.shared?.eventEditWindow?.close()
                                     }
                                 )
                                 

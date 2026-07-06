@@ -58,8 +58,20 @@ struct CalendarEvent:Identifiable,Hashable {
     var attendees:[CalendarEventPerson]?
 }
 
+enum CalendarParticipantStatus: Hashable {
+    case unknown
+    case pending
+    case accepted
+    case declined
+    case tentative
+    case delegated
+    case completed
+    case inProcess
+}
+
 struct CalendarEventPerson:Hashable,Equatable
 {
     let name:String?
     let url:URL?
+    let status: CalendarParticipantStatus?
 }

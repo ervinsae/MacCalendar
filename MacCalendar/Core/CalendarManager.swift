@@ -233,6 +233,33 @@ class CalendarManager: ObservableObject {
         self.calendarInfos = calendarInfos.sorted { $0.title < $1.title }
     }
     
+    func createEvent(event: CalendarEvent) async throws {
+        guard authorizationStatus == .fullAccess else {
+            throw CalendarError.noPermission
+        }
+
+        guard let targetCalendar = writableCalendarForNewEvents() else {
+            throw CalendarError.calendarNotModifiable
+        }
+
+        let ekEvent = EKEvent(eventStore: eventStore)
+        ekEvent.calendar = targetCalendar
+        ekEvent.title = event.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "新事件" : event.title
+        ekEvent.startDate = event.startDate
+        ekEvent.endDate = event.endDate
+        ekEvent.isAllDay = event.isAllDay
+        ekEvent.location = event.location
+        ekEvent.notes = event.notes
+        ekEvent.url = event.url
+
+        do {
+            try eventStore.save(ekEvent, span: .thisEvent, commit: true)
+            refreshEvents()
+        } catch {
+            throw CalendarError.catchError(error)
+        }
+    }
+
     func updateEvent(event: CalendarEvent) async throws {
         guard authorizationStatus == .fullAccess else {
             throw CalendarError.noPermission
@@ -285,6 +312,21 @@ class CalendarManager: ObservableObject {
     
     // MARK: 私有辅助类
     
+    private func writableCalendarForNewEvents() -> EKCalendar? {
+        let calendars = eventStore.calendars(for: .event)
+        if let selectedIDs = getFilterCalendarIds(),
+           let selectedCalendar = calendars.first(where: { selectedIDs.contains($0.calendarIdentifier) && $0.allowsContentModifications }) {
+            return selectedCalendar
+        }
+
+        if let defaultCalendar = eventStore.defaultCalendarForNewEvents,
+           defaultCalendar.allowsContentModifications {
+            return defaultCalendar
+        }
+
+        return calendars.first { $0.allowsContentModifications }
+    }
+
     private func subscribeToCalendarChanges() {
         NotificationCenter.default
             .publisher(for: .EKEventStoreChanged, object: eventStore)
@@ -321,6 +363,29 @@ class CalendarManager: ObservableObject {
         }
         return rawName
     }
+
+    private func participantStatus(_ status: EKParticipantStatus) -> CalendarParticipantStatus {
+        switch status {
+        case .unknown:
+            return .unknown
+        case .pending:
+            return .pending
+        case .accepted:
+            return .accepted
+        case .declined:
+            return .declined
+        case .tentative:
+            return .tentative
+        case .delegated:
+            return .delegated
+        case .completed:
+            return .completed
+        case .inProcess:
+            return .inProcess
+        @unknown default:
+            return .unknown
+        }
+    }
     private func getEventsByDate(from startDate: Date, to endDate: Date) async -> [CalendarEvent] {
         // 检查缓存中是否存在该日期范围的事件
         let cacheKey = "\(startDate.timeIntervalSince1970)-\(endDate.timeIntervalSince1970)"
@@ -354,11 +419,11 @@ class CalendarManager: ObservableObject {
                 color: CodableColor(color: Color(nsColor: ekEvent.calendar.color)),
                 notes: ekEvent.notes,
                 url: ekEvent.url,
-                organizer: ekEvent.organizer.map { CalendarEventPerson(name: $0.name, url: $0.url) },
+                organizer: ekEvent.organizer.map { CalendarEventPerson(name: $0.name, url: $0.url, status: participantStatus($0.participantStatus)) },
                 attendees: ekEvent.attendees?
                     .map { participant in
                         let prettyName = getDisplayName(participant: participant)
-                        return CalendarEventPerson(name: prettyName, url: participant.url)
+                        return CalendarEventPerson(name: prettyName, url: participant.url, status: participantStatus(participant.participantStatus))
                     }
                     .sorted { person1, person2 in
                         let name1 = person1.name ?? ""

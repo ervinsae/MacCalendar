@@ -8,121 +8,255 @@
 import SwiftUI
 
 struct CalendarView: View {
-    @StateObject var calendarManager:CalendarManager
-        
+    @StateObject var calendarManager: CalendarManager
+
     @FocusState private var focusedField: DateField?
 
     enum DateField {
         case year
         case month
     }
-    
-    var columns: [GridItem] {
+
+    private let calendar = Calendar.Based
+
+    private var columns: [GridItem] {
         let count = SettingsManager.showWeekNumber ? 8 : 7
-        return Array(repeating: GridItem(.flexible()), count: count)
+        return Array(
+            repeating: GridItem(.flexible(minimum: 21, maximum: 26), spacing: 0),
+            count: count
+        )
     }
-    let calendar = Calendar.Based
+
+    private var monthTitle: String {
+        DateHelper.formatDate(date: calendarManager.selectedMonth, format: "M月 yyyy")
+    }
 
     var body: some View {
-        VStack(spacing:0) {
-            HStack(spacing:0){
-                Image(systemName: "chevron.compact.backward")
-                    .frame(width:80,alignment: .leading)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        calendarManager.goToPreviousMonth()
-                    }
-                Spacer()
-                HStack(){
-                    EditableDateComponent(
-                        date: $calendarManager.selectedMonth,
-                        component: .year,
-                        calendarManager: calendarManager, focusState: _focusedField,
-                        equals: .year
-                    )
+        VStack(spacing: 0) {
+            header
+                .padding(.init(top: 10, leading: 12, bottom: 8, trailing: 12))
 
-                    EditableDateComponent(
-                        date: $calendarManager.selectedMonth,
-                        component: .month,
-                        calendarManager: calendarManager, focusState: _focusedField,
-                        equals: .month
-                    )
-                }
-                Spacer()
-                Image(systemName: "chevron.compact.forward")
-                    .frame(width:80,alignment: .trailing)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        calendarManager.goToNextMonth()
-                    }
+            VStack(spacing: 3) {
+                weekdayHeader
+                monthGrid
             }
-            
-            HStack {
-                ForEach(calendarManager.weekdays, id: \.self) { day in
-                        VStack(spacing: 4) {
-                            Text(day)
-                                .font(.system(size: 12))
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 35)
-                        .cornerRadius(6)
-                    }
+            .padding(.init(top: 0, leading: 9, bottom: 5, trailing: 9))
+        }
+    }
+
+    private var header: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Text(monthTitle)
+                .font(.system(size: 17.5, weight: .semibold, design: .rounded))
+                .foregroundStyle(ItsycalPalette.primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+
+            Spacer(minLength: 8)
+
+            HStack(spacing: 8) {
+                MonthNavigationButton(systemName: "chevron.left") {
+                    calendarManager.goToPreviousMonth()
                 }
-            
-            LazyVGrid(columns: columns, spacing: 0) {
-                ForEach(calendarManager.calendarDays, id: \.self) { day in
-                    if day.is_weekNumber == true {
-                        Text("\(day.weekNumber!)")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.gray.opacity(0.5))
-                    }
-                    else{
-                        ZStack{
-                            if day.is_today {
-                                Circle()
-                                    .fill(Color.red)
-                                    .frame(width: 35, height: 35, alignment: .center)
-                            }
-                            if calendar.isDate(day.date!, equalTo: calendarManager.selectedDay, toGranularity: .day){
-                                Circle()
-                                    .fill(Color.red.opacity(0.3))
-                                    .frame(width: 35, height: 35, alignment: .center)
-                            }
-                            if day.offday != nil {
-                                Text(day.offday == true ? "休":"班")
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(.white)
-                                    .frame(width: 14,height: 14)
-                                    .background(day.offday == true ? .red : .gray)
-                                    .cornerRadius(3)
-                                    .offset(x:12,y:-12)
-                            }
-                            VStack(spacing: -2) {
-                                Text("\(calendar.component(.day, from: day.date!))")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(day.is_today ? .white : (day.is_currentMonth ? .primary : .gray.opacity(0.5)))
-                                
-                                Text(!day.holidays.isEmpty ? day.holidays[0] : day.solar_term ?? day.short_lunar ?? "")
-                                    .font(.system(size: 8))
-                                    .foregroundColor(day.is_today ? .white : (day.is_currentMonth ? .primary : .gray.opacity(0.5)))
-                            }
-                            .frame(height:35)
-                            .cornerRadius(6)
-                            .contentShape(Rectangle())
-                            if !day.events.isEmpty {
-                                Circle()
-                                    .fill(day.events.first!.color.color)
-                                    .frame(width: 5, height: 5)
-                                    .offset(y:15)
-                            }
-                        }
-                        .frame(width: 35, height: 35, alignment: .center)
-                        .contentShape(Circle())
-                        .onTapGesture {
-                            calendarManager.getSelectedDayEvents(date: day.date!)
+
+                Button {
+                    calendarManager.resetToToday()
+                } label: {
+                    Circle()
+                        .fill(isSelectedDayToday ? ItsycalPalette.secondaryText : Color(nsColor: .systemGreen))
+                        .frame(width: 7, height: 7)
+                }
+                .buttonStyle(.plain)
+                .help("回到今天")
+
+                MonthNavigationButton(systemName: "chevron.right") {
+                    calendarManager.goToNextMonth()
+                }
+            }
+        }
+        .frame(height: 18)
+    }
+
+    private var weekdayHeader: some View {
+        LazyVGrid(columns: columns, spacing: 0) {
+            ForEach(Array(calendarManager.weekdays.enumerated()), id: \.offset) { index, day in
+                Text(weekdayDisplayName(day))
+                    .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                    .foregroundStyle(isWeekendColumn(index) ? ItsycalPalette.secondaryText : ItsycalPalette.primaryText)
+                    .frame(height: 18)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private var monthGrid: some View {
+        LazyVGrid(columns: columns, spacing: 0) {
+            ForEach(calendarManager.calendarDays, id: \.self) { day in
+                if day.is_weekNumber {
+                    Text("\(day.weekNumber ?? 0)")
+                        .font(.system(size: 11.5, weight: .semibold, design: .rounded))
+                        .foregroundStyle(ItsycalPalette.secondaryText)
+                        .frame(height: 35)
+                        .frame(maxWidth: .infinity)
+                } else {
+                    CalendarDayCell(
+                        day: day,
+                        isSelected: isSelected(day),
+                        calendar: calendar
+                    ) {
+                        if let date = day.date {
+                            calendarManager.getSelectedDayEvents(date: date)
                         }
                     }
                 }
             }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+    }
+
+    private var isSelectedDayToday: Bool {
+        calendar.isDateInToday(calendarManager.selectedDay)
+    }
+
+    private func isSelected(_ day: CalendarDay) -> Bool {
+        guard let date = day.date else { return false }
+        return calendar.isDate(date, equalTo: calendarManager.selectedDay, toGranularity: .day)
+    }
+
+    private func weekdayDisplayName(_ value: String) -> String {
+        switch value {
+        case "周一": return "一"
+        case "周二": return "二"
+        case "周三": return "三"
+        case "周四": return "四"
+        case "周五": return "五"
+        case "周六": return "六"
+        case "周日": return "日"
+        default: return value
+        }
+    }
+
+    private func isWeekendColumn(_ index: Int) -> Bool {
+        let offset = SettingsManager.showWeekNumber ? index - 1 : index
+        guard offset >= 0 else { return false }
+        if SettingsManager.firstDayInWeek == .monday {
+            return offset == 5 || offset == 6
+        }
+        return offset == 0 || offset == 6
+    }
+}
+
+private struct MonthNavigationButton: View {
+    let systemName: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 11.5, weight: .bold))
+                .foregroundStyle(ItsycalPalette.secondaryText)
+                .frame(width: 11, height: 15)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct CalendarDayCell: View {
+    let day: CalendarDay
+    let isSelected: Bool
+    let calendar: Calendar
+    let action: () -> Void
+
+    private var date: Date { day.date ?? Date() }
+    private var dayNumber: Int { calendar.component(.day, from: date) }
+
+    private var dayTextColor: Color {
+        if !day.is_currentMonth { return ItsycalPalette.secondaryText.opacity(0.52) }
+        return ItsycalPalette.primaryText
+    }
+
+    private var lunarText: String {
+        if let holiday = day.holidays.first, !holiday.isEmpty { return holiday }
+        if let solarTerm = day.solar_term, !solarTerm.isEmpty { return solarTerm }
+        return day.short_lunar ?? ""
+    }
+
+    private var eventDots: [Color] {
+        var colors = day.events.prefix(3).map { $0.color.color }
+        if colors.isEmpty, !lunarText.isEmpty, day.is_currentMonth {
+            if day.solar_term != nil {
+                colors.append(ItsycalPalette.eventPurple)
+            } else if !day.holidays.isEmpty {
+                colors.append(ItsycalPalette.eventRed)
+            }
+        }
+        return Array(colors.prefix(3))
+    }
+
+    var body: some View {
+        Button(action: action) {
+            ZStack(alignment: .topTrailing) {
+                VStack(spacing: 0) {
+                    Text("\(dayNumber)")
+                        .font(.system(size: 11.5, weight: .semibold, design: .rounded))
+                        .foregroundStyle(dayTextColor)
+                        .lineLimit(1)
+
+                    Text(lunarText)
+                        .font(.system(size: 7.8, weight: .medium))
+                        .foregroundStyle(day.is_currentMonth ? ItsycalPalette.secondaryText : ItsycalPalette.tertiaryText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
+                        .frame(height: 9)
+
+                    HStack(spacing: 1.5) {
+                        ForEach(Array(eventDots.enumerated()), id: \.offset) { _, color in
+                            Circle()
+                                .fill(color)
+                                .frame(width: 3.0, height: 3.0)
+                        }
+                    }
+                    .frame(height: 8)
+                }
+                .padding(.top, 4)
+                .frame(maxWidth: .infinity, minHeight: 35, maxHeight: 35)
+                .background(selectionBackground)
+                .overlay(selectionStroke)
+
+                if let offday = day.offday {
+                    Text(offday ? "休" : "班")
+                        .font(.system(size: 5.5, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 8, height: 8)
+                        .background(offday ? ItsycalPalette.eventRed : ItsycalPalette.secondaryText)
+                        .clipShape(RoundedRectangle(cornerRadius: 2.5, style: .continuous))
+                        .offset(x: -1, y: 1)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .contentShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+    }
+
+    @ViewBuilder
+    private var selectionBackground: some View {
+        if isSelected {
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .fill(ItsycalPalette.selectionBlue.opacity(0.12))
+        } else if day.is_today {
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .fill(ItsycalPalette.secondaryText.opacity(0.09))
+        }
+    }
+
+    @ViewBuilder
+    private var selectionStroke: some View {
+        if isSelected {
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .stroke(ItsycalPalette.selectionBlue, lineWidth: 1.4)
+        } else if day.is_today {
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .stroke(ItsycalPalette.todayStroke, lineWidth: 1.2)
         }
     }
 }
@@ -130,12 +264,12 @@ struct CalendarView: View {
 struct EditableDateComponent: View {
     @Binding var date: Date
     let component: Calendar.Component
-    
+
     var calendarManager: CalendarManager
-    
+
     @FocusState var focusState: CalendarView.DateField?
     let equals: CalendarView.DateField
-    
+
     @State private var isEditing: Bool = false
     @State private var temporaryText: String = ""
 
@@ -150,7 +284,7 @@ struct EditableDateComponent: View {
                     .onSubmit {
                         commitChange()
                     }
-                    .onChange(of: focusState) { oldValue,newValue in
+                    .onChange(of: focusState) { oldValue, newValue in
                         if newValue != equals {
                             commitChange()
                         }
@@ -164,17 +298,17 @@ struct EditableDateComponent: View {
             }
         }
     }
-    
+
     private func startEditing() {
         let value = Calendar.current.component(component, from: date)
         temporaryText = String(value)
         isEditing = true
         focusState = equals
     }
-    
+
     private func commitChange() {
         let cleanText = temporaryText.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         guard let newValue = Int(cleanText) else {
             isEditing = false
             return
@@ -188,20 +322,20 @@ struct EditableDateComponent: View {
         }
 
         var components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
-        
+
         if component == .year {
             components.year = newValue
         } else if component == .month {
             components.month = newValue
         }
-        
+
         if let newDate = Calendar.current.date(from: components) {
             let year = Calendar.current.component(.year, from: newDate)
             let month = Calendar.current.component(.month, from: newDate)
-            
+
             calendarManager.goToCustomizeMonth(year: year, month: month)
         }
-        
+
         isEditing = false
     }
 }
