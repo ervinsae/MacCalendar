@@ -250,14 +250,11 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
         } else {
             isPopoverAnimating = true
 
-            calendarManager.resetToToday()
-
             NSApp.activate(ignoringOtherApps: true)
 
-            DispatchQueue.main.async {
-                let targetSize = self.preferredPopoverSize == .zero
-                    ? ContentView.preferredSize(calendarManager: self.calendarManager)
-                    : self.preferredPopoverSize
+            Task { @MainActor in
+                await self.calendarManager.resetToTodayAndLoadEvents()
+                let targetSize = ContentView.preferredSize(calendarManager: self.calendarManager)
                 self.applyPopoverSize(targetSize)
                 self.popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
