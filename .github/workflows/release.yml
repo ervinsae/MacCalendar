@@ -2,91 +2,65 @@ name: Build and Release macOS App
 
 on:
   push:
-    branches: [ "main" ]
+    tags:
+      - "v*"
 
 jobs:
   build-and-release:
     runs-on: macos-latest
-    
-    # 授予 GitHub Token 读写代码库的权限，以支持自动提交和 Release
+
     permissions:
       contents: write
 
     steps:
-      # 1. 拉取代码
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 设置为0，以获取所有历史提交和Tag
+          fetch-depth: 0
 
-      # 2. 自动生成自增 Tag
-      - name: Bump version and push tag
-        id: tag_version
-        uses: mathieudutour/github-tag-action@v6.2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          default_bump: patch 
-          tag_prefix: v       
-
-      # 3. 修改 Xcode 项目文件中的版本号 (混合使用 sed 和 agvtool)
       - name: Update Xcode Project Version
         run: |
-          RAW_TAG="${{ steps.tag_version.outputs.new_tag }}"
+          RAW_TAG="${GITHUB_REF_NAME}"
           APP_VERSION="${RAW_TAG#v}"
           BUILD_NUMBER="${{ github.run_number }}"
-          
-          # 1. 使用 sed 替换 pbxproj 中的 MARKETING_VERSION (对外版本号)
+
           sed -i '' -e 's/MARKETING_VERSION = .*/MARKETING_VERSION = '"$APP_VERSION"';/' "MacCalendar.xcodeproj/project.pbxproj"
-          
-          # 2. 内部 Build 号依然可以使用 agvtool 更新
           xcrun agvtool new-version -all "$BUILD_NUMBER"
 
-      # 4. 修改后的版本号自动提交回 GitHub 仓库
-      - name: Commit and Push changes
+      - name: Resolve release metadata
+        id: release_meta
         run: |
-          # 配置机器人的 Git 身份
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # 暂存被修改的项目文件
-          git add .
-          
-          # 检查是否有文件变动，如果有则提交
-          if ! git diff-index --quiet HEAD; then
-            # 必须包含 [skip ci]，否则会导致无限循环触发 Actions！
-            git commit -m "chore: bump version to ${{ steps.tag_version.outputs.new_tag }} [skip ci]"
-            git push origin main
-          else
-            echo "No changes to commit."
-          fi
+          RAW_TAG="${GITHUB_REF_NAME}"
+          APP_VERSION="${RAW_TAG#v}"
+          DMG_NAME="MacCalendar-${APP_VERSION}.dmg"
 
-      # 5. 设置 Xcode 版本
+          echo "app_version=${APP_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "dmg_name=${DMG_NAME}" >> "$GITHUB_OUTPUT"
+
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest-stable
 
-      # 6. 编译 SwiftUI 应用程序
       - name: Build SwiftUI App
         run: |
           xcodebuild clean build \
             -project "MacCalendar.xcodeproj" \
             -scheme "MacCalendar" \
             -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="-" \
             SYMROOT=$(pwd)/build \
             OBJROOT=$(pwd)/build
 
-      # 7. 安装打包工具 create-dmg
       - name: Install create-dmg
         run: brew install create-dmg
 
-      # 8. 打包成 DMG 文件
       - name: Create DMG package
         run: |
           mkdir -p dmg_source
           cp -r build/Release/MacCalendar.app dmg_source/
-          
+
           create-dmg \
             --volname "MacCalendar Installer" \
             --window-pos 200 120 \
@@ -95,17 +69,16 @@ jobs:
             --icon "MacCalendar.app" 150 120 \
             --hide-extension "MacCalendar.app" \
             --app-drop-link 450 120 \
-            "MacCalendar.dmg" \
+            "${{ steps.release_meta.outputs.dmg_name }}" \
             "dmg_source/"
 
-      # 9. 创建 GitHub Release 并上传 DMG
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: MacCalendar.dmg
-          tag_name: ${{ steps.tag_version.outputs.new_tag }}
-          name: "Release ${{ steps.tag_version.outputs.new_tag }}"
-          body: "此版本由 GitHub Actions 自动编译和发布。\n\n包含的更新:\n${{ steps.tag_version.outputs.changelog }}"
+          files: ${{ steps.release_meta.outputs.dmg_name }}
+          tag_name: ${{ github.ref_name }}
+          name: "MacCalendar ${{ github.ref_name }}"
+          generate_release_notes: true
           draft: false
           prerelease: false
         env:
