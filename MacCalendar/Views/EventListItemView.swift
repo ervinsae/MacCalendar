@@ -12,6 +12,7 @@ struct EventListItemView: View {
 
     @State private var selectedEventId: String? = nil
     @State private var suppressNextOpenUntil: Date? = nil
+    @State private var isHovering = false
 
     private var timeText: String {
         if event.isAllDay {
@@ -66,6 +67,14 @@ struct EventListItemView: View {
         }
     }
 
+    @ViewBuilder
+    private var hoverBackground: some View {
+        if isHovering {
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .fill(ItsycalPalette.secondaryText.opacity(0.11))
+        }
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 6) {
             Circle()
@@ -94,8 +103,13 @@ struct EventListItemView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.vertical, 0)
-        .contentShape(Rectangle())
+        .padding(.vertical, 3)
+        .padding(.horizontal, 5)
+        .background(hoverBackground)
+        .contentShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+        .onHover { hovering in
+            isHovering = hovering
+        }
         .onTapGesture {
             handleTap()
         }

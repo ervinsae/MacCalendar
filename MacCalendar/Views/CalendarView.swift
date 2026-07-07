@@ -19,12 +19,23 @@ struct CalendarView: View {
 
     private let calendar = Calendar.Based
 
+    private var columnCount: Int {
+        SettingsManager.showWeekNumber ? 8 : 7
+    }
+
     private var columns: [GridItem] {
-        let count = SettingsManager.showWeekNumber ? 8 : 7
-        return Array(
+        Array(
             repeating: GridItem(.flexible(minimum: 21, maximum: 26), spacing: 0),
-            count: count
+            count: columnCount
         )
+    }
+
+    private var highlightedWeekdayValues: Set<Int> {
+        [1, 7]
+    }
+
+    private var highlightedColumnColor: Color {
+        ItsycalPalette.primaryText.opacity(0.085)
     }
 
     private var monthTitle: String {
@@ -64,7 +75,7 @@ struct CalendarView: View {
                 } label: {
                     Circle()
                         .fill(isSelectedDayToday ? ItsycalPalette.secondaryText : Color(nsColor: .systemGreen))
-                        .frame(width: 7, height: 7)
+                        .frame(width: 8, height: 8)
                 }
                 .buttonStyle(.plain)
                 .help("回到今天")
@@ -85,13 +96,16 @@ struct CalendarView: View {
                     .foregroundStyle(isWeekendColumn(index) ? ItsycalPalette.secondaryText : ItsycalPalette.primaryText)
                     .frame(height: 18)
                     .frame(maxWidth: .infinity)
+                    .background(columnHighlightBackground(isHighlightedColumn(index)))
             }
         }
     }
 
     private var monthGrid: some View {
         LazyVGrid(columns: columns, spacing: 0) {
-            ForEach(calendarManager.calendarDays, id: \.self) { day in
+            ForEach(Array(calendarManager.calendarDays.enumerated()), id: \.element) { index, day in
+                let columnIndex = index % columnCount
+
                 if day.is_weekNumber {
                     Text("\(day.weekNumber ?? 0)")
                         .font(.system(size: 11.5, weight: .semibold, design: .rounded))
@@ -102,7 +116,9 @@ struct CalendarView: View {
                     CalendarDayCell(
                         day: day,
                         isSelected: isSelected(day),
-                        calendar: calendar
+                        calendar: calendar,
+                        isHighlightedColumn: isHighlightedColumn(columnIndex),
+                        highlightedColumnColor: highlightedColumnColor
                     ) {
                         if let date = day.date {
                             calendarManager.getSelectedDayEvents(date: date)
@@ -137,12 +153,31 @@ struct CalendarView: View {
     }
 
     private func isWeekendColumn(_ index: Int) -> Bool {
+        guard let weekday = weekdayValue(forColumnIndex: index) else { return false }
+        return weekday == 1 || weekday == 7
+    }
+
+    private func isHighlightedColumn(_ index: Int) -> Bool {
+        guard let weekday = weekdayValue(forColumnIndex: index) else { return false }
+        return highlightedWeekdayValues.contains(weekday)
+    }
+
+    private func weekdayValue(forColumnIndex index: Int) -> Int? {
         let offset = SettingsManager.showWeekNumber ? index - 1 : index
-        guard offset >= 0 else { return false }
+        guard offset >= 0 else { return nil }
+
         if SettingsManager.firstDayInWeek == .monday {
-            return offset == 5 || offset == 6
+            return ((offset + 1) % 7) + 1
         }
-        return offset == 0 || offset == 6
+        return offset + 1
+    }
+
+    @ViewBuilder
+    private func columnHighlightBackground(_ isHighlighted: Bool) -> some View {
+        if isHighlighted {
+            Rectangle()
+                .fill(highlightedColumnColor)
+        }
     }
 }
 
@@ -165,6 +200,8 @@ private struct CalendarDayCell: View {
     let day: CalendarDay
     let isSelected: Bool
     let calendar: Calendar
+    let isHighlightedColumn: Bool
+    let highlightedColumnColor: Color
     let action: () -> Void
 
     private var date: Date { day.date ?? Date() }
@@ -196,6 +233,9 @@ private struct CalendarDayCell: View {
     var body: some View {
         Button(action: action) {
             ZStack(alignment: .topTrailing) {
+                columnHighlightBackground
+                    .frame(maxWidth: .infinity, minHeight: 35, maxHeight: 35)
+
                 VStack(spacing: 0) {
                     Text("\(dayNumber)")
                         .font(.system(size: 11.5, weight: .semibold, design: .rounded))
@@ -222,6 +262,7 @@ private struct CalendarDayCell: View {
                 .frame(maxWidth: .infinity, minHeight: 35, maxHeight: 35)
                 .background(selectionBackground)
                 .overlay(selectionStroke)
+                .padding(.horizontal, 0.5)
 
                 if let offday = day.offday {
                     Text(offday ? "休" : "班")
@@ -236,6 +277,14 @@ private struct CalendarDayCell: View {
         }
         .buttonStyle(.plain)
         .contentShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+    }
+
+    @ViewBuilder
+    private var columnHighlightBackground: some View {
+        if isHighlightedColumn {
+            Rectangle()
+                .fill(highlightedColumnColor)
+        }
     }
 
     @ViewBuilder

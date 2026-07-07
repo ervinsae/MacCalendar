@@ -40,7 +40,7 @@ struct EventListView: View {
 
         let toolbarHeight: CGFloat = 28
         let dividerHeight: CGFloat = 1
-        let contentPadding: CGFloat = 4 + 8
+        let contentPadding: CGFloat = 4 + 4
         let sectionGap: CGFloat = max(0, CGFloat(sections.count - 1)) * 11
         let sectionHeights = sections.reduce(CGFloat(0)) { total, section in
             total + estimatedSectionHeight(note: section.note, events: section.events, isEmptyVisibleSection: section.isEmptyVisibleSection)
@@ -63,8 +63,8 @@ struct EventListView: View {
         }
         if !events.isEmpty {
             height += 4
-            height += events.enumerated().reduce(CGFloat(0)) { total, pair in
-                total + estimatedEventHeight(pair.element) + (pair.offset == 0 ? 0 : 9)
+            height += events.reduce(CGFloat(0)) { total, event in
+                total + estimatedEventHeight(event)
             }
         }
         return height
@@ -72,7 +72,7 @@ struct EventListView: View {
 
     private static func estimatedEventHeight(_ event: CalendarEvent) -> CGFloat {
         let location = event.location?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return location.isEmpty ? 28 : 41
+        return location.isEmpty ? 30 : 43
     }
 
     private static func visibleEvents(_ events: [CalendarEvent], excludingAllDayTitle title: String? = nil) -> [CalendarEvent] {
@@ -135,7 +135,7 @@ struct EventListView: View {
             }
             .padding(.horizontal, 11)
             .padding(.top, 4)
-            .padding(.bottom, 8)
+            .padding(.bottom, 4)
         }
     }
 
@@ -146,11 +146,11 @@ struct EventListView: View {
             }
             Spacer()
             ItsycalToolbarButton(systemName: "pin.fill", size: 11, help: "固定弹窗") {}
-            Spacer().frame(width: 12)
+            Spacer().frame(width: 10)
             ItsycalToolbarButton(systemName: "calendar", size: 13, help: "打开系统日历") {
                 AppDelegate.shared?.openSystemCalendar()
             }
-            Spacer().frame(width: 12)
+            Spacer().frame(width: 10)
             ItsycalToolbarButton(systemName: "gearshape.fill", size: 13.5, help: "日历设置") {
                 AppDelegate.shared?.showSettingsWindowWithSelection(.calendar)
             }
@@ -212,16 +212,20 @@ struct EventListView: View {
     }
 
     private func relativeTitle(for date: Date) -> String {
-        if calendar.isDateInToday(date) {
+        let startOfToday = calendar.startOfDay(for: Date())
+        let startOfDate = calendar.startOfDay(for: date)
+        let dayOffset = calendar.dateComponents([.day], from: startOfToday, to: startOfDate).day
+
+        switch dayOffset {
+        case 0:
             return "今天"
-        }
-
-        if let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: Date())),
-           calendar.isDate(date, inSameDayAs: tomorrow) {
+        case 1:
             return "明天"
+        case 2:
+            return "后天"
+        default:
+            return DateHelper.formatDate(date: date, format: "EEEE")
         }
-
-        return DateHelper.formatDate(date: date, format: "M月d日")
     }
 }
 
@@ -267,7 +271,7 @@ private struct EventSectionView: View {
                         .padding(.top, 7)
                 }
             } else {
-                VStack(alignment: .leading, spacing: 9) {
+                VStack(alignment: .leading, spacing: 0) {
                     ForEach(section.events, id: \.id) { event in
                         EventListItemView(event: event)
                     }

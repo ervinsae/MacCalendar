@@ -10,6 +10,7 @@ import SwiftUI
 struct ContentView: View {
     @StateObject var calendarManager: CalendarManager
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = SettingsManager.appearanceMode
+    @State private var measuredEventListHeight: CGFloat = 0
 
     static func preferredSize(calendarManager: CalendarManager) -> CGSize {
         CGSize(
@@ -30,18 +31,38 @@ struct ContentView: View {
     }
 
     private var preferredSize: CGSize {
-        Self.preferredSize(calendarManager: calendarManager)
+        CGSize(
+            width: Self.contentWidth,
+            height: Self.calendarHeight(calendarManager: calendarManager) + eventListHeight
+        )
+    }
+
+    private var eventListHeight: CGFloat {
+        measuredEventListHeight > 0
+            ? measuredEventListHeight
+            : EventListView.estimatedHeight(calendarManager: calendarManager)
     }
 
     var body: some View {
         VStack(spacing: 0) {
             CalendarView(calendarManager: calendarManager)
             EventListView(calendarManager: calendarManager)
+                .fixedSize(horizontal: false, vertical: true)
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear
+                            .preference(key: ContentHeightPreferenceKey.self, value: proxy.size.height)
+                    }
+                }
         }
         .frame(width: preferredSize.width, height: preferredSize.height, alignment: .top)
         .background(ItsycalPalette.windowBackground)
         .clipShape(RoundedRectangle(cornerRadius: ItsycalPalette.popoverCornerRadius, style: .continuous))
         .fixedSize(horizontal: true, vertical: true)
+        .onPreferenceChange(ContentHeightPreferenceKey.self) { height in
+            guard height > 0, abs(height - measuredEventListHeight) > 0.5 else { return }
+            measuredEventListHeight = height
+        }
         .preference(key: SizeKey.self, value: preferredSize)
     }
 }
@@ -57,7 +78,7 @@ enum ItsycalPalette {
     static let eventRed = Color(nsColor: .systemRed)
     static let eventBlue = Color(nsColor: .systemBlue)
     static let eventPurple = Color(nsColor: .systemPurple)
-    static let popoverCornerRadius: CGFloat = 8
+    static let popoverCornerRadius: CGFloat = 6
 }
 
 struct SizeKey: PreferenceKey {
