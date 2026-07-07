@@ -9,6 +9,7 @@ import SwiftUI
 
 struct EventListItemView: View {
     let event: CalendarEvent
+    @ObservedObject var calendarManager: CalendarManager
     @Binding var presentedEventId: String?
 
     @State private var suppressNextOpenUntil: Date? = nil
@@ -128,7 +129,7 @@ struct EventListItemView: View {
             attachmentAnchor: .rect(.rect(CGRect(x: -10, y: 20, width: 0, height: 0))),
             arrowEdge: .leading,
             content: {
-                EventDetailView(event: event)
+                EventDetailView(calendarManager: calendarManager, event: event)
             }
         )
     }

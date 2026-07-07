@@ -124,7 +124,11 @@ struct EventListView: View {
                             .padding(.vertical, 5)
                     }
 
-                    EventSectionView(section: section, presentedEventId: $presentedEventId)
+                    EventSectionView(
+                        section: section,
+                        calendarManager: calendarManager,
+                        presentedEventId: $presentedEventId
+                    )
                 }
             }
             .padding(.horizontal, 11)
@@ -241,6 +245,7 @@ private struct ItsycalCalendarNote {
 
 private struct EventSectionView: View {
     let section: ItsycalEventSection
+    @ObservedObject var calendarManager: CalendarManager
     @Binding var presentedEventId: String?
 
     var body: some View {
@@ -270,7 +275,11 @@ private struct EventSectionView: View {
             } else {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(section.events, id: \.id) { event in
-                        EventListItemView(event: event, presentedEventId: $presentedEventId)
+                        EventListItemView(
+                            event: event,
+                            calendarManager: calendarManager,
+                            presentedEventId: $presentedEventId
+                        )
                     }
                 }
                 .padding(.top, 4)

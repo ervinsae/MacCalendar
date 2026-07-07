@@ -8,8 +8,7 @@
 import SwiftUI
 
 struct EventDetailView: View {
-    @EnvironmentObject var calendarManager: CalendarManager
-
+    @ObservedObject var calendarManager: CalendarManager
     let event: CalendarEvent
 
     @State private var showingDeleteConfirmation = false
