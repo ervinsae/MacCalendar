@@ -7,15 +7,9 @@
 
 import SwiftUI
 
-struct ContentHeightPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
-}
-
 struct EventListView: View {
     @StateObject var calendarManager: CalendarManager
+    @Binding var presentedEventId: String?
 
     private let calendar = Calendar.Based
 
@@ -130,7 +124,7 @@ struct EventListView: View {
                             .padding(.vertical, 5)
                     }
 
-                    EventSectionView(section: section)
+                    EventSectionView(section: section, presentedEventId: $presentedEventId)
                 }
             }
             .padding(.horizontal, 11)
@@ -230,7 +224,9 @@ struct EventListView: View {
 }
 
 private struct ItsycalEventSection: Identifiable {
-    let id = UUID()
+    var id: Date {
+        Calendar.Based.startOfDay(for: date)
+    }
     let date: Date
     let title: String
     let dateText: String
@@ -245,6 +241,7 @@ private struct ItsycalCalendarNote {
 
 private struct EventSectionView: View {
     let section: ItsycalEventSection
+    @Binding var presentedEventId: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -273,7 +270,7 @@ private struct EventSectionView: View {
             } else {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(section.events, id: \.id) { event in
-                        EventListItemView(event: event)
+                        EventListItemView(event: event, presentedEventId: $presentedEventId)
                     }
                 }
                 .padding(.top, 4)

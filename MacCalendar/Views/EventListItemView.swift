@@ -9,8 +9,8 @@ import SwiftUI
 
 struct EventListItemView: View {
     let event: CalendarEvent
+    @Binding var presentedEventId: String?
 
-    @State private var selectedEventId: String? = nil
     @State private var suppressNextOpenUntil: Date? = nil
     @State private var isHovering = false
 
@@ -47,9 +47,9 @@ struct EventListItemView: View {
     }
 
     private func handleTap() {
-        if selectedEventId == event.id {
+        if presentedEventId == event.id {
             suppressNextOpenUntil = nil
-            selectedEventId = nil
+            presentedEventId = nil
             return
         }
 
@@ -58,11 +58,11 @@ struct EventListItemView: View {
             return
         }
 
-        selectedEventId = event.id
+        presentedEventId = event.id
     }
 
     private func markDismissedByPopoverIfNeeded() {
-        if selectedEventId == event.id {
+        if presentedEventId == event.id {
             suppressNextOpenUntil = Date().addingTimeInterval(0.35)
         }
     }
@@ -115,11 +115,13 @@ struct EventListItemView: View {
         }
         .popover(
             isPresented: Binding(
-                get: { selectedEventId == event.id },
+                get: { presentedEventId == event.id },
                 set: { isPresented in
-                    if !isPresented {
+                    if isPresented {
+                        presentedEventId = event.id
+                    } else {
                         markDismissedByPopoverIfNeeded()
-                        selectedEventId = nil
+                        presentedEventId = nil
                     }
                 }
             ),

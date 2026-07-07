@@ -10,7 +10,7 @@ import SwiftUI
 struct ContentView: View {
     @StateObject var calendarManager: CalendarManager
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = SettingsManager.appearanceMode
-    @State private var measuredEventListHeight: CGFloat = 0
+    @State private var presentedEventId: String? = nil
 
     static func preferredSize(calendarManager: CalendarManager) -> CGSize {
         CGSize(
@@ -30,40 +30,30 @@ struct ContentView: View {
         return 8 + 18 + 3 + 18 + 3 + rowCount * 35 + 5
     }
 
-    private var preferredSize: CGSize {
-        CGSize(
-            width: Self.contentWidth,
-            height: Self.calendarHeight(calendarManager: calendarManager) + eventListHeight
-        )
-    }
-
-    private var eventListHeight: CGFloat {
-        measuredEventListHeight > 0
-            ? measuredEventListHeight
-            : EventListView.estimatedHeight(calendarManager: calendarManager)
+    private func performAfterDismissingEventPopover(_ action: @escaping () -> Void) {
+        presentedEventId = nil
+        action()
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            CalendarView(calendarManager: calendarManager)
-            EventListView(calendarManager: calendarManager)
+            CalendarView(calendarManager: calendarManager, performSelection: performAfterDismissingEventPopover)
+            EventListView(calendarManager: calendarManager, presentedEventId: $presentedEventId)
                 .fixedSize(horizontal: false, vertical: true)
-                .background {
-                    GeometryReader { proxy in
-                        Color.clear
-                            .preference(key: ContentHeightPreferenceKey.self, value: proxy.size.height)
-                    }
-                }
         }
-        .frame(width: preferredSize.width, height: preferredSize.height, alignment: .top)
+        .frame(width: Self.contentWidth)
+        .fixedSize(horizontal: true, vertical: true)
         .background(ItsycalPalette.windowBackground)
         .clipShape(RoundedRectangle(cornerRadius: ItsycalPalette.popoverCornerRadius, style: .continuous))
-        .fixedSize(horizontal: true, vertical: true)
-        .onPreferenceChange(ContentHeightPreferenceKey.self) { height in
-            guard height > 0, abs(height - measuredEventListHeight) > 0.5 else { return }
-            measuredEventListHeight = height
+        .onChange(of: calendarManager.selectedDay) { _, _ in
+            presentedEventId = nil
         }
-        .preference(key: SizeKey.self, value: preferredSize)
+        .background {
+            GeometryReader { proxy in
+                Color.clear
+                    .preference(key: SizeKey.self, value: proxy.size)
+            }
+        }
     }
 }
 

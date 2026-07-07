@@ -9,6 +9,7 @@ import SwiftUI
 
 struct CalendarView: View {
     @StateObject var calendarManager: CalendarManager
+    var performSelection: (@escaping () -> Void) -> Void = { action in action() }
 
     @FocusState private var focusedField: DateField?
 
@@ -67,11 +68,15 @@ struct CalendarView: View {
 
             HStack(spacing: 8) {
                 MonthNavigationButton(systemName: "chevron.left") {
-                    calendarManager.goToPreviousMonth()
+                    performSelection {
+                        calendarManager.goToPreviousMonth()
+                    }
                 }
 
                 Button {
-                    calendarManager.resetToToday()
+                    performSelection {
+                        calendarManager.resetToToday()
+                    }
                 } label: {
                     Circle()
                         .fill(isSelectedDayToday ? ItsycalPalette.secondaryText : Color(nsColor: .systemGreen))
@@ -81,7 +86,9 @@ struct CalendarView: View {
                 .help("回到今天")
 
                 MonthNavigationButton(systemName: "chevron.right") {
-                    calendarManager.goToNextMonth()
+                    performSelection {
+                        calendarManager.goToNextMonth()
+                    }
                 }
             }
         }
@@ -121,7 +128,9 @@ struct CalendarView: View {
                         highlightedColumnColor: highlightedColumnColor
                     ) {
                         if let date = day.date {
-                            calendarManager.getSelectedDayEvents(date: date)
+                            performSelection {
+                                calendarManager.getSelectedDayEvents(date: date)
+                            }
                         }
                     }
                 }

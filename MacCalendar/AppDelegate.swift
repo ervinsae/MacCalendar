@@ -19,9 +19,9 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
     var hostingController: NSHostingController<AnyView>?
     lazy var calendarManager: CalendarManager = CalendarManager()
 
-    private var resizeWorkItem:DispatchWorkItem?
     private var preferredPopoverSize: CGSize = .zero
     private var calendarIcon = CalendarIcon()
+    private let hourlyChimeService = HourlyChimeService()
     private var cancellables = Set<AnyCancellable>()
     private var isPopoverAnimating = false
 
@@ -29,6 +29,7 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
+        hourlyChimeService.start()
 
         _ = calendarManager
 
@@ -141,18 +142,7 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
         let contentView = ContentView(calendarManager: self.calendarManager)
             .onPreferenceChange(SizeKey.self){ size in
                 guard size != .zero else { return }
-
-                self.resizeWorkItem?.cancel()
-
-                self.preferredPopoverSize = size
-
-                let workItem = DispatchWorkItem{
-                    self.applyPopoverSize(size)
-                }
-
-                self.resizeWorkItem = workItem
-                // 延迟80ms执行
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08, execute: workItem)
+                self.applyPopoverSizeIfNeeded(size)
             }
         hostingController = NSHostingController(rootView: AnyView(contentView))
         preferredPopoverSize = ContentView.preferredSize(calendarManager: self.calendarManager)
@@ -178,11 +168,28 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
         NotificationCenter.default.addObserver(self, selector: #selector(closePopover), name: NSApplication.didResignActiveNotification, object: nil)
     }
 
+    func applicationWillTerminate(_ notification: Notification) {
+        hourlyChimeService.stop()
+    }
+
     private func applyPopoverSize(_ size: CGSize) {
         guard size != .zero else { return }
         preferredPopoverSize = size
-        popover.contentSize = size
-        hostingController?.view.setFrameSize(size)
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0
+            context.allowsImplicitAnimation = false
+            popover.contentSize = size
+            hostingController?.view.setFrameSize(size)
+        }
+    }
+
+    private func applyPopoverSizeIfNeeded(_ size: CGSize) {
+        guard size != .zero else { return }
+        guard abs(size.width - preferredPopoverSize.width) > 0.5
+                || abs(size.height - preferredPopoverSize.height) > 0.5 else {
+            return
+        }
+        applyPopoverSize(size)
     }
 
     private func updateAppearance() {
