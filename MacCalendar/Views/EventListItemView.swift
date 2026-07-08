@@ -6,13 +6,13 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct EventListItemView: View {
     let event: CalendarEvent
     @ObservedObject var calendarManager: CalendarManager
-    @Binding var presentedEventId: String?
 
-    @State private var suppressNextOpenUntil: Date? = nil
+    @State private var anchorView: NSView?
     @State private var isHovering = false
 
     private var timeText: String {
@@ -48,24 +48,10 @@ struct EventListItemView: View {
     }
 
     private func handleTap() {
-        if presentedEventId == event.id {
-            suppressNextOpenUntil = nil
-            presentedEventId = nil
-            return
-        }
-
-        if let suppressNextOpenUntil, suppressNextOpenUntil > Date() {
-            self.suppressNextOpenUntil = nil
-            return
-        }
-
-        presentedEventId = event.id
-    }
-
-    private func markDismissedByPopoverIfNeeded() {
-        if presentedEventId == event.id {
-            suppressNextOpenUntil = Date().addingTimeInterval(0.35)
-        }
+        AppDelegate.shared?.toggleEventDetailPopover(
+            event: event,
+            relativeTo: anchorView
+        )
     }
 
     @ViewBuilder
@@ -107,6 +93,11 @@ struct EventListItemView: View {
         .padding(.vertical, 3)
         .padding(.horizontal, 5)
         .background(hoverBackground)
+        .background {
+            EventDetailPopoverAnchor { view in
+                anchorView = view
+            }
+        }
         .contentShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
         .onHover { hovering in
             isHovering = hovering
@@ -114,23 +105,5 @@ struct EventListItemView: View {
         .onTapGesture {
             handleTap()
         }
-        .popover(
-            isPresented: Binding(
-                get: { presentedEventId == event.id },
-                set: { isPresented in
-                    if isPresented {
-                        presentedEventId = event.id
-                    } else {
-                        markDismissedByPopoverIfNeeded()
-                        presentedEventId = nil
-                    }
-                }
-            ),
-            attachmentAnchor: .rect(.rect(CGRect(x: -10, y: 20, width: 0, height: 0))),
-            arrowEdge: .leading,
-            content: {
-                EventDetailView(calendarManager: calendarManager, event: event)
-            }
-        )
     }
 }

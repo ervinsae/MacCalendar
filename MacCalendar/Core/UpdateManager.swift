@@ -11,7 +11,7 @@ import Combine
 class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
     static let shared = UpdateManager()
 
-    private let githubRepoURL = "https://api.github.com/repos/bylinxx/MacCalendar/releases/latest"
+    private let githubRepoURL = "https://api.github.com/repos/ervinsae/MacCalendar/releases/latest"
     
     private var currentVersion: String {
         Bundle.main.appVersion ?? "1.0.0"

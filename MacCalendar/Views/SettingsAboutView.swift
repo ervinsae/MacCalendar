@@ -35,7 +35,7 @@ struct SettingsAboutView: View {
                     }
 
                     // GitHub链接
-                    Link(destination: URL(string:"https://github.com/bylinxx/MacCalendar")!) {
+                    Link(destination: URL(string:"https://github.com/ervinsae/MacCalendar")!) {
                         HStack(alignment: .center, spacing: 8) {
                             Image("github-logo")
                                 .renderingMode(.template)

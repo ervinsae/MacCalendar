@@ -9,7 +9,7 @@ import SwiftUI
 import AppKit
 import Combine
 
-class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
+class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate, NSPopoverDelegate {
     static var shared:AppDelegate?
 
     var statusItem: NSStatusItem!
@@ -20,6 +20,9 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
     lazy var calendarManager: CalendarManager = CalendarManager()
 
     private var preferredPopoverSize: CGSize = .zero
+    private var eventDetailPopover: NSPopover?
+    private var eventDetailEventId: String?
+    private var pendingEventDetailCloseActions: [() -> Void] = []
     private var calendarIcon = CalendarIcon()
     private let hourlyChimeService = HourlyChimeService()
     private var cancellables = Set<AnyCancellable>()
@@ -221,9 +224,106 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
     private func updateAppearance() {
         let mode = SettingsManager.appearanceMode
         popover.appearance = mode.nsAppearance
+        eventDetailPopover?.appearance = mode.nsAppearance
         updateContentHostAppearance()
         settingsWindow?.appearance = mode.nsAppearance
         eventEditWindow?.appearance = mode.nsAppearance
+    }
+
+    func toggleEventDetailPopover(event: CalendarEvent, relativeTo anchorView: NSView?) {
+        guard let anchorView else { return }
+
+        if eventDetailPopover?.isShown == true, eventDetailEventId == event.id {
+            closeEventDetailPopover()
+            return
+        }
+
+        let presentAction = { [weak self, weak anchorView] in
+            guard let self, let anchorView else { return }
+            self.presentEventDetailPopover(event: event, relativeTo: anchorView)
+        }
+
+        if eventDetailPopover?.isShown == true {
+            closeEventDetailPopover(before: presentAction)
+        } else {
+            presentAction()
+        }
+    }
+
+    func closeEventDetailPopover(before action: (() -> Void)? = nil) {
+        if let action {
+            pendingEventDetailCloseActions.append(action)
+        }
+
+        guard let eventDetailPopover, eventDetailPopover.isShown else {
+            self.eventDetailPopover = nil
+            eventDetailEventId = nil
+            runPendingEventDetailCloseActions()
+            return
+        }
+
+        let closingPopover = eventDetailPopover
+        eventDetailPopover.performClose(nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self, weak closingPopover] in
+            guard let self, self.eventDetailPopover === closingPopover else { return }
+            self.eventDetailPopover = nil
+            self.eventDetailEventId = nil
+            self.runPendingEventDetailCloseActions()
+        }
+    }
+
+    private func presentEventDetailPopover(event: CalendarEvent, relativeTo anchorView: NSView) {
+        let detailView = EventDetailView(calendarManager: calendarManager, event: event)
+        let hostingController = NSHostingController(rootView: AnyView(detailView))
+        let popover = NSPopover()
+        popover.behavior = .transient
+        popover.animates = false
+        popover.delegate = self
+        popover.appearance = SettingsManager.appearanceMode.nsAppearance
+        popover.contentViewController = hostingController
+
+        let fittingSize = measuredFittingSize(for: hostingController.view, fallback: CGSize(width: 350, height: 180))
+        popover.contentSize = fittingSize
+
+        eventDetailPopover = popover
+        eventDetailEventId = event.id
+        popover.show(
+            relativeTo: NSRect(x: -10, y: 20, width: 0, height: 0),
+            of: anchorView,
+            preferredEdge: .minX
+        )
+    }
+
+    private func measuredFittingSize(for view: NSView, fallback: CGSize) -> CGSize {
+        view.needsLayout = true
+        view.layoutSubtreeIfNeeded()
+
+        let fittingSize = view.fittingSize
+        guard fittingSize.width.isFinite,
+              fittingSize.height.isFinite,
+              fittingSize.width > 0,
+              fittingSize.height > 0 else {
+            return normalizedPopoverSize(fallback)
+        }
+
+        return normalizedPopoverSize(fittingSize)
+    }
+
+    private func runPendingEventDetailCloseActions() {
+        let actions = pendingEventDetailCloseActions
+        pendingEventDetailCloseActions.removeAll()
+        actions.forEach { $0() }
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        guard let closedPopover = notification.object as? NSPopover,
+              closedPopover === eventDetailPopover else {
+            return
+        }
+
+        eventDetailPopover = nil
+        eventDetailEventId = nil
+        runPendingEventDetailCloseActions()
     }
 
     @objc func statusItemClicked(sender: NSStatusBarButton) {
@@ -294,6 +394,7 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
     }
 
     @objc func closePopover() {
+        closeEventDetailPopover()
         popover.performClose(nil)
     }
 

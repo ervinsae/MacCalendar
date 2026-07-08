@@ -1,89 +1,31 @@
 # MacCalendar
 
-完全免费、开源的离线小而美 macOS 菜单栏日历 App
+MacCalendar 是一款原生 macOS 菜单栏日历应用，界面参考 Itsycal 的轻量弹窗体验，并加入农历、节气、中国节假日、系统日程管理和整点报时等功能。
 
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-EC662F?style=flat&logo=swift&logoColor=white)
-[![macOS](https://img.shields.io/badge/macOS-14.0+-green.svg)](https://github.com/bylinxx/MacCalendar/releases/latest)
-![GitHub Release](https://img.shields.io/github/v/release/bylinxx/MacCalendar)
+[![macOS](https://img.shields.io/badge/macOS-14.6+-green.svg)](https://github.com/ervinsae/MacCalendar/releases/latest)
+![GitHub Release](https://img.shields.io/github/v/release/ervinsae/MacCalendar)
 
-## 关于本项目
+## 功能亮点
 
-MacCalendar 是一款开源的 macOS 菜单栏日历应用，使用 **SwiftUI + AppKit** 原生开发。
+- 菜单栏常驻，点击即可打开紧凑的月历弹窗。
+- 支持公历、农历、24 节气、传统节日和 2015-2026 年中国法定节假日/调休数据。
+- 支持周一或周日作为每周第一天，可选显示周数。
+- 周六、周日整列背景高亮，日期格展示系统日程颜色点。
+- 日程列表按当前选中日期展示“今天、明天、后天、星期几”，右侧显示具体日期。
+- 已过去日程自动置灰，未开始日程保持正常显示。
+- 日程详情独立弹窗显示标题、时间、地点、组织者、与会人员、备注和链接。
+- 日程详情中的链接可点击打开；与会人员按接受、拒绝、待定状态显示不同颜色圆点。
+- 支持新增、编辑、删除系统日历事件。
+- 支持按日历源筛选日程，并可跳转系统日历权限设置。
+- 工具栏可快速新增事件、打开系统日历、打开应用设置。
+- 菜单栏显示内容可自定义为图标、日期、时间或自定义格式，支持双行显示。
+- 支持浅色、深色、跟随系统外观。
+- 支持开机自启动。
+- 支持检查 GitHub Release 更新并下载 DMG。
+- 支持整点报时：整点时播放内置 `beep.mp3`。
 
-本项目的 UI 设计灵感来源于 [Itsycal](https://www.mowglii.com/itsycal/)——一款优秀的 macOS 菜单栏日历软件。MacCalendar 在此基础上使用 SwiftUI 进行了全新实现，并针对中国用户的需求增加了**农历、24节气、中国法定节假日调休**等本地化功能，是一个面向中文用户的 Itsycal 替代方案。
-
-> 感谢 Itsycal 为 macOS 日历类应用树立的标杆，MacCalendar 向其致敬。
-
-## 主要功能
-
-> [!TIP]   
-> - 界面简洁精致，轻量化占用资源极小，完全离线不需要联网  
-> - 运行后静默显示在菜单栏，右键或者按快捷键[Command + ，]打开设置窗口
-> - 中国农历、24节气、大部分节日（公历或农历）  
-> - 中国法定放假安排（自2015年以来）  
-> - 个性化图标、日历类型、周数等显示  
-> - 读取系统日历数据，可按类型筛选显示，支持修改和删除
-> - 自定义菜单栏显示内容，支持图标/日期/时间/自定义格式
-> - 输入年/月快捷跳转
-
-## 技术栈
-
-| 技术 | 说明 |
-|:---|:---|
-| SwiftUI | 主要 UI 框架 |
-| AppKit | 菜单栏 `NSStatusItem`、`NSPopover`、窗口管理 |
-| EventKit | 读取 / 修改系统日历事件 |
-| Combine | 响应式数据流与状态管理 |
-
-### 项目结构
-
-```
-MacCalendar/
-├── MacCalendarApp.swift       # App 入口
-├── AppDelegate.swift          # 菜单栏 StatusItem、Popover 管理
-├── Core/
-│   ├── CalendarManager.swift  # 日历数据管理与缓存
-│   ├── SettingsManager.swift  # 偏好设置
-│   ├── UpdateManager.swift    # 应用更新检查
-│   └── LaunchAtLoginManager.swift
-├── Models/
-│   ├── CalendarDay.swift      # 日历天数据模型
-│   ├── CalendarEvent.swift    # 事件数据模型
-│   ├── CalendarIcon.swift     # 菜单栏图标显示逻辑
-│   └── ...
-├── Views/
-│   ├── ContentView.swift      # 主视图容器 & 调色板
-│   ├── CalendarView.swift     # 月历视图
-│   ├── EventListView.swift    # 事件列表 & 工具栏
-│   ├── EventDetailView.swift  # 事件详情
-│   ├── EventEditView.swift    # 事件编辑
-│   └── Settings*.swift        # 设置页面
-├── Utils/
-│   ├── LunarDateHelper.swift  # 农历计算
-│   ├── SolarTermHelper.swift  # 24节气计算
-│   ├── HolidayHelper.swift    # 节日判断
-│   ├── OffdayHelper.swift     # 调休判断
-│   └── DateHelper.swift       # 日期工具
-└── Data/
-    └── 20xx.json              # 2015—2026 法定节假日数据
-```
-
-
-## 安装
-
-> [!NOTE]
-> - **手动安装**
->   1. 从 [GitHub Releases](https://github.com/bylinxx/MacCalendar/releases/latest) 下载最新版本 dmg 格式的镜像
->   2. 双击打开下载的 dmg 镜像
->   3. 拖动MacCalendar图标到Applications图标完成安装
->   4. 如何更新？偏好设置->检查更新
-> - **homebrew安装**
->   1. 在命令行执行 brew tap bylinxx/tap 引入tap
->   2. 在命令行执行 brew install maccalendar 完成安装
->   3. 由于没有购买开发者签名，首次打开会提示"无法验证开发者"或"应用已损坏"，必须在"系统设置 -> 隐私与安全性 -> 安全性"中点击"仍要打开"，或者在终端执行 xattr -cr /Applications/MacCalendar.app 来移除安全隔离标记
->   4. 如何更新？偏好设置->检查更新
-
-## 界面截图
+## 截图
 
 <p>
   <img width="226" alt="日历主界面" src="screenshots/calendar_main.png" />
@@ -91,29 +33,88 @@ MacCalendar/
   <img width="512" alt="事件详情" src="screenshots/event_detail.png" />
 </p>
 
+## 安装
+
+1. 前往 [GitHub Releases](https://github.com/ervinsae/MacCalendar/releases/latest) 下载最新版本的 `MacCalendar-*.dmg`。
+2. 打开 DMG，将 `MacCalendar.app` 拖入 `Applications`。
+3. 首次启动后，根据系统提示授予日历访问权限。
+
+由于当前构建未进行 Apple Developer ID 签名，如果 macOS 提示无法验证开发者，可在“系统设置 -> 隐私与安全性”中选择仍要打开，或执行：
+
+```bash
+xattr -cr /Applications/MacCalendar.app
+```
+
+## 使用
+
+- 点击菜单栏图标打开日历弹窗。
+- 点击日期切换日程列表。
+- 点击日程打开详情，再次点击同一日程可关闭详情。
+- 点击工具栏 `+` 新增日程。
+- 点击工具栏日历图标打开系统日历。
+- 点击工具栏设置图标打开 MacCalendar 设置。
+- 在设置中可调整菜单栏显示、日历筛选、周数、外观、开机自启和更新检查。
+
+## 本地开发
+
+```bash
+git clone https://github.com/ervinsae/MacCalendar.git
+cd MacCalendar
+open MacCalendar.xcodeproj
+```
+
+命令行构建：
+
+```bash
+xcodebuild -project MacCalendar.xcodeproj \
+  -scheme MacCalendar \
+  -configuration Debug \
+  CODE_SIGNING_ALLOWED=NO \
+  build
+```
+
+## 技术栈
+
+| 技术 | 说明 |
+| --- | --- |
+| SwiftUI | 主界面和设置界面 |
+| AppKit | 菜单栏 `NSStatusItem`、`NSPopover`、窗口管理 |
+| EventKit | 读取、新增、编辑、删除系统日历事件 |
+| Combine | 设置变更和菜单栏内容刷新 |
+| AVFoundation | 整点报时音频播放 |
+
+## 项目结构
+
+```text
+MacCalendar/
+├── AppDelegate.swift              # 菜单栏、主弹窗、日程详情弹窗管理
+├── MacCalendarApp.swift           # App 入口
+├── Core/
+│   ├── CalendarManager.swift      # 日历数据、事件读写、权限和缓存
+│   ├── HourlyChimeService.swift   # 整点报时
+│   ├── LaunchAtLoginManager.swift # 开机自启动
+│   ├── SettingsManager.swift      # 偏好设置
+│   └── UpdateManager.swift        # GitHub Release 更新检查
+├── Models/                        # 日历、日程、设置模型
+├── Utils/                         # 农历、节气、节假日、日期工具
+├── Views/                         # 月历、日程列表、详情、编辑、设置
+├── Data/                          # 中国法定节假日数据
+└── beep.mp3                       # 整点报时音频
+```
+
+## 隐私
+
+MacCalendar 通过系统 EventKit 访问本机日历数据。日历事件的读取和修改均在本机完成，不会上传日历内容。只有在用户手动检查更新或下载更新时，应用会访问 GitHub Release。
+
+## 发布
+
+推送 `v*` 标签会触发 GitHub Actions 自动构建 Release 版 App、打包 DMG，并将 DMG 上传到对应的 GitHub Release。
+
 ## 致谢
 
-- **[Itsycal](https://www.mowglii.com/itsycal/)** — 优秀的 macOS 菜单栏日历，MacCalendar 的 UI 设计灵感来源
-- **[NateScarlet/holiday-cn](https://github.com/NateScarlet/holiday-cn)** — 中国法定节假日数据来源
-
-## 支持开发
-
-[<img width="200" src="https://pic1.afdiancdn.com/static/img/welcome/button-sponsorme.png" alt="afdian">](https://afdian.com/a/macmc)
-
-## 参与贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-1. Fork 本仓库
-2. 创建你的特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交你的改动 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到远端 (`git push origin feature/AmazingFeature`)
-5. 提交 Pull Request
+- [Itsycal](https://www.mowglii.com/itsycal/)：MacCalendar 的弹窗交互和视觉方向参考了这款优秀的 macOS 菜单栏日历。
+- [NateScarlet/holiday-cn](https://github.com/NateScarlet/holiday-cn)：中国法定节假日数据来源。
 
 ## 开源协议
 
-本项目基于 MIT 协议开源，详见 [LICENSE](LICENSE) 文件。
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=bylinxx/MacCalendar&type=Timeline)](https://www.star-history.com/#bylinxx/MacCalendar&Timeline)
+本项目基于 MIT 协议开源，详见 [LICENSE](LICENSE)。

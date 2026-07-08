@@ -9,7 +9,6 @@ import SwiftUI
 
 struct EventListView: View {
     @StateObject var calendarManager: CalendarManager
-    @Binding var presentedEventId: String?
 
     private let calendar = Calendar.Based
 
@@ -126,8 +125,7 @@ struct EventListView: View {
 
                     EventSectionView(
                         section: section,
-                        calendarManager: calendarManager,
-                        presentedEventId: $presentedEventId
+                        calendarManager: calendarManager
                     )
                 }
             }
@@ -246,7 +244,6 @@ private struct ItsycalCalendarNote {
 private struct EventSectionView: View {
     let section: ItsycalEventSection
     @ObservedObject var calendarManager: CalendarManager
-    @Binding var presentedEventId: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -277,8 +274,7 @@ private struct EventSectionView: View {
                     ForEach(section.events, id: \.id) { event in
                         EventListItemView(
                             event: event,
-                            calendarManager: calendarManager,
-                            presentedEventId: $presentedEventId
+                            calendarManager: calendarManager
                         )
                     }
                 }

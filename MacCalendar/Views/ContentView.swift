@@ -10,7 +10,6 @@ import SwiftUI
 struct ContentView: View {
     @StateObject var calendarManager: CalendarManager
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = SettingsManager.appearanceMode
-    @State private var presentedEventId: String? = nil
 
     static func preferredSize(calendarManager: CalendarManager) -> CGSize {
         CGSize(
@@ -31,23 +30,23 @@ struct ContentView: View {
     }
 
     private func performAfterDismissingEventPopover(_ action: @escaping () -> Void) {
-        presentedEventId = nil
-        action()
+        if let appDelegate = AppDelegate.shared {
+            appDelegate.closeEventDetailPopover(before: action)
+        } else {
+            action()
+        }
     }
 
     var body: some View {
         VStack(spacing: 0) {
             CalendarView(calendarManager: calendarManager, performSelection: performAfterDismissingEventPopover)
-            EventListView(calendarManager: calendarManager, presentedEventId: $presentedEventId)
+            EventListView(calendarManager: calendarManager)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(width: Self.contentWidth)
         .fixedSize(horizontal: true, vertical: true)
         .background(ItsycalPalette.windowBackground)
         .clipShape(RoundedRectangle(cornerRadius: ItsycalPalette.popoverCornerRadius, style: .continuous))
-        .onChange(of: calendarManager.selectedDay) { _, _ in
-            presentedEventId = nil
-        }
         .background {
             GeometryReader { proxy in
                 Color.clear
