@@ -283,9 +283,10 @@ private struct CalendarDayCell: View {
                         .offset(x: -1, y: 1)
                 }
             }
+            .frame(maxWidth: .infinity, minHeight: 35, maxHeight: 35)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .contentShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
     }
 
     @ViewBuilder

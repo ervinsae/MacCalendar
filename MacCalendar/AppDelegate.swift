@@ -147,11 +147,7 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
         hostingController = NSHostingController(rootView: AnyView(contentView))
         preferredPopoverSize = ContentView.preferredSize(calendarManager: self.calendarManager)
         applyPopoverSize(preferredPopoverSize)
-        if let contentHostView = hostingController?.view {
-            contentHostView.wantsLayer = true
-            contentHostView.layer?.cornerRadius = ItsycalPalette.popoverCornerRadius
-            contentHostView.layer?.masksToBounds = true
-        }
+        updateContentHostAppearance()
         popover.contentViewController = hostingController
 
         updateAppearance()
@@ -174,12 +170,13 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
 
     private func applyPopoverSize(_ size: CGSize) {
         guard size != .zero else { return }
-        preferredPopoverSize = size
+        let normalizedSize = normalizedPopoverSize(size)
+        preferredPopoverSize = normalizedSize
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0
             context.allowsImplicitAnimation = false
-            popover.contentSize = size
-            hostingController?.view.setFrameSize(size)
+            popover.contentSize = normalizedSize
+            hostingController?.view.setFrameSize(normalizedSize)
         }
     }
 
@@ -192,9 +189,39 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
         applyPopoverSize(size)
     }
 
+    private func measuredPopoverSize(fallback: CGSize) -> CGSize {
+        guard let contentHostView = hostingController?.view else { return normalizedPopoverSize(fallback) }
+
+        contentHostView.needsLayout = true
+        contentHostView.layoutSubtreeIfNeeded()
+
+        let fittingSize = contentHostView.fittingSize
+        guard fittingSize.width.isFinite,
+              fittingSize.height.isFinite,
+              fittingSize.width > 0,
+              fittingSize.height > 0 else {
+            return normalizedPopoverSize(fallback)
+        }
+
+        return normalizedPopoverSize(fittingSize)
+    }
+
+    private func normalizedPopoverSize(_ size: CGSize) -> CGSize {
+        CGSize(width: ceil(size.width), height: ceil(size.height))
+    }
+
+    private func updateContentHostAppearance() {
+        guard let contentHostView = hostingController?.view else { return }
+        contentHostView.wantsLayer = true
+        contentHostView.layer?.cornerRadius = ItsycalPalette.popoverCornerRadius
+        contentHostView.layer?.masksToBounds = true
+        contentHostView.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+    }
+
     private func updateAppearance() {
         let mode = SettingsManager.appearanceMode
         popover.appearance = mode.nsAppearance
+        updateContentHostAppearance()
         settingsWindow?.appearance = mode.nsAppearance
         eventEditWindow?.appearance = mode.nsAppearance
     }
@@ -254,7 +281,9 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate {
 
             Task { @MainActor in
                 await self.calendarManager.resetToTodayAndLoadEvents()
-                let targetSize = ContentView.preferredSize(calendarManager: self.calendarManager)
+                await Task.yield()
+                let fallbackSize = ContentView.preferredSize(calendarManager: self.calendarManager)
+                let targetSize = self.measuredPopoverSize(fallback: fallbackSize)
                 self.applyPopoverSize(targetSize)
                 self.popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
