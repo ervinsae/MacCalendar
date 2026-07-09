@@ -30,9 +30,9 @@ private enum UpdateError: LocalizedError {
 class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
     static let shared = UpdateManager()
 
-    private let apiLatestReleaseURL = URL(string: "https://api.github.com/repos/ervinsae/MacCalendar/releases/latest")!
-    private let webLatestReleaseURL = URL(string: "https://github.com/ervinsae/MacCalendar/releases/latest")!
-    private let releaseDownloadBaseURL = "https://github.com/ervinsae/MacCalendar/releases/download"
+    private let apiLatestReleaseURL = URL(string: "https://api.github.com/repos/ervinsae/Menucal/releases/latest")!
+    private let webLatestReleaseURL = URL(string: "https://github.com/ervinsae/Menucal/releases/latest")!
+    private let releaseDownloadBaseURL = "https://github.com/ervinsae/Menucal/releases/download"
     
     private var currentVersion: String {
         Bundle.main.appVersion ?? "1.0.0"
