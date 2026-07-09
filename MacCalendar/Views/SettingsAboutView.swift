@@ -1,6 +1,6 @@
 //
 //  SettingsAbout.swift
-//  MacCalendar
+//  Menucal
 //
 //  Created by ruihelin on 2025/10/6.
 //
@@ -13,10 +13,10 @@ struct SettingsAboutView: View {
             VStack(alignment: .center, spacing: 20) {
                 // 应用名称和描述
                 VStack(alignment: .center, spacing: 8) {
-                    Text("MacCalendar")
+                    Text("Menucal")
                         .font(.title)
                         .fontWeight(.bold)
-                    Text("完全免费且开源的macOS小而美菜单栏日历")
+                    Text("完全免费且开源的 macOS 小而美菜单栏日历")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -81,7 +81,7 @@ struct SettingsAboutView: View {
 
                 // 版权信息
                 VStack(alignment: .center, spacing: 4) {
-                    Text("© 2026 MacCalendar")
+                    Text("© 2026 Menucal")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

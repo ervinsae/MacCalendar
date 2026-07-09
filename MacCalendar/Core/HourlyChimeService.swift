@@ -1,6 +1,6 @@
 //
 //  HourlyChimeService.swift
-//  MacCalendar
+//  Menucal
 //
 //  Created by Codex on 2026/7/7.
 //
@@ -92,7 +92,7 @@ final class HourlyChimeService: NSObject {
 
     private func playBeep() {
         guard let url = Bundle.main.url(forResource: "beep", withExtension: "mp3") else {
-            NSLog("MacCalendar hourly chime skipped: beep.mp3 not found in bundle.")
+            NSLog("Menucal hourly chime skipped: beep.mp3 not found in bundle.")
             return
         }
 
@@ -102,7 +102,7 @@ final class HourlyChimeService: NSObject {
             player.play()
             self.player = player
         } catch {
-            NSLog("MacCalendar hourly chime failed: \(error.localizedDescription)")
+            NSLog("Menucal hourly chime failed: \(error.localizedDescription)")
         }
     }
 }

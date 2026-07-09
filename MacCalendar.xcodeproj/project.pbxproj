@@ -22,7 +22,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		0CE2D1DE2E89321A00C92A10 /* MacCalendar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacCalendar.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0CE2D1DE2E89321A00C92A10 /* Menucal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Menucal.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0CE2D2002E89390000C92A10 /* 2015.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = 2015.json; sourceTree = "<group>"; };
 		0CE2D2012E89390000C92A10 /* 2016.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = 2016.json; sourceTree = "<group>"; };
 		0CE2D2022E89390000C92A10 /* 2017.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = 2017.json; sourceTree = "<group>"; };
@@ -81,7 +81,7 @@
 		0CE2D1DF2E89321A00C92A10 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				0CE2D1DE2E89321A00C92A10 /* MacCalendar.app */,
+				0CE2D1DE2E89321A00C92A10 /* Menucal.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -126,8 +126,8 @@
 			name = MacCalendar;
 			packageProductDependencies = (
 			);
-			productName = MacCalendar;
-			productReference = 0CE2D1DE2E89321A00C92A10 /* MacCalendar.app */;
+			productName = Menucal;
+			productReference = 0CE2D1DE2E89321A00C92A10 /* Menucal.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -321,7 +321,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = MacCalendar/MacCalendar.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = B7NL26JPVD;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -331,6 +331,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "此应用需要访问您的日历以显示即将到来的事件。";
+				INFOPLIST_KEY_CFBundleDisplayName = Menucal;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -345,9 +346,9 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Lin.MacCalendar;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				MARKETING_VERSION = 1.0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = Lin.Menucal;
+				PRODUCT_NAME = Menucal;
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -370,7 +371,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = MacCalendar/MacCalendar.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_TEAM = B7NL26JPVD;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -380,6 +381,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "此应用需要访问您的日历以显示即将到来的事件。";
+				INFOPLIST_KEY_CFBundleDisplayName = Menucal;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -394,9 +396,9 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Lin.MacCalendar;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				MARKETING_VERSION = 1.0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = Lin.Menucal;
+				PRODUCT_NAME = Menucal;
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;

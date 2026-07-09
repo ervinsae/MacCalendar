@@ -1,6 +1,6 @@
 //
 //  OffdayData.swift
-//  MacCalendar
+//  Menucal
 //
 //  Created by ruihelin on 2025/12/12.
 //

@@ -16,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "0CE2D1DD2E89321A00C92A10"
-               BuildableName = "MacCalendar.app"
+               BuildableName = "Menucal.app"
                BlueprintName = "MacCalendar"
                ReferencedContainer = "container:MacCalendar.xcodeproj">
             </BuildableReference>
@@ -45,7 +45,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "0CE2D1DD2E89321A00C92A10"
-            BuildableName = "MacCalendar.app"
+            BuildableName = "Menucal.app"
             BlueprintName = "MacCalendar"
             ReferencedContainer = "container:MacCalendar.xcodeproj">
          </BuildableReference>
@@ -62,7 +62,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "0CE2D1DD2E89321A00C92A10"
-            BuildableName = "MacCalendar.app"
+            BuildableName = "Menucal.app"
             BlueprintName = "MacCalendar"
             ReferencedContainer = "container:MacCalendar.xcodeproj">
          </BuildableReference>

@@ -1,6 +1,6 @@
 //
 //  AlertInfo.swift
-//  MacCalendar
+//  Menucal
 //
 //  Created by ruihelin on 2025/10/12.
 //

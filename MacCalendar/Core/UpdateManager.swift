@@ -1,6 +1,6 @@
 //
 //  UpdateManager.swift
-//  MacCalendar
+//  Menucal
 //
 //  Created by ruihelin on 2026/4/28.
 //
@@ -8,10 +8,31 @@
 import Foundation
 import Combine
 
+private struct ReleaseInfo {
+    let version: String
+    let downloadURL: URL?
+}
+
+private enum UpdateError: LocalizedError {
+    case invalidResponse
+    case requestFailed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidResponse:
+            return "更新信息解析失败"
+        case .requestFailed(let message):
+            return message
+        }
+    }
+}
+
 class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
     static let shared = UpdateManager()
 
-    private let githubRepoURL = "https://api.github.com/repos/ervinsae/MacCalendar/releases/latest"
+    private let apiLatestReleaseURL = URL(string: "https://api.github.com/repos/ervinsae/MacCalendar/releases/latest")!
+    private let webLatestReleaseURL = URL(string: "https://github.com/ervinsae/MacCalendar/releases/latest")!
+    private let releaseDownloadBaseURL = "https://github.com/ervinsae/MacCalendar/releases/download"
     
     private var currentVersion: String {
         Bundle.main.appVersion ?? "1.0.0"
@@ -56,48 +77,15 @@ class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
         }
 
         do {
-            let (data, response) = try await URLSession.shared.data(from: URL(string: githubRepoURL)!)
-            
-            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
-                await MainActor.run {
-                    downloadError = "网络请求失败，状态码: \(httpResponse.statusCode)"
-                }
-                return
-            }
-            
-            if let release = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                if let message = release["message"] as? String {
-                    await MainActor.run {
-                        downloadError = message
-                    }
-                    return
-                }
-                
-                if let tagName = release["tag_name"] as? String {
-                    let version = tagName.replacingOccurrences(of: "v", with: "")
-                    
-                    await MainActor.run {
-                        latestVersion = version
-                    }
+            let release = try await fetchLatestRelease()
+            let comparisonResult = compareVersions(currentVersion, release.version)
 
-                    let comparisonResult = compareVersions(currentVersion, version)
-                    
-                    if comparisonResult == .orderedAscending {
-                        await MainActor.run {
-                            updateAvailable = true
-                        }
-                        if let assets = release["assets"] as? [[String: Any]] {
-                            for asset in assets {
-                                if let downloadUrl = asset["browser_download_url"] as? String,
-                                   downloadUrl.hasSuffix(".dmg") {
-                                    await MainActor.run {
-                                        self.downloadURL = URL(string: downloadUrl)
-                                    }
-                                    break
-                                }
-                            }
-                        }
-                    }
+            await MainActor.run {
+                latestVersion = release.version
+
+                if comparisonResult == .orderedAscending {
+                    updateAvailable = true
+                    downloadURL = release.downloadURL
                 }
             }
         } catch {
@@ -105,6 +93,83 @@ class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
                 downloadError = error.localizedDescription
             }
         }
+    }
+
+    private func fetchLatestRelease() async throws -> ReleaseInfo {
+        do {
+            return try await fetchLatestReleaseFromAPI()
+        } catch {
+            return try await fetchLatestReleaseFromLatestPage()
+        }
+    }
+
+    private func fetchLatestReleaseFromAPI() async throws -> ReleaseInfo {
+        var request = URLRequest(url: apiLatestReleaseURL)
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.setValue("Menucal/\(currentVersion)", forHTTPHeaderField: "User-Agent")
+        request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
+            let message = releaseErrorMessage(from: data) ?? "网络请求失败，状态码: \(httpResponse.statusCode)"
+            throw UpdateError.requestFailed(message)
+        }
+
+        guard let release = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] else {
+            throw UpdateError.invalidResponse
+        }
+
+        if let message = release["message"] as? String {
+            throw UpdateError.requestFailed(message)
+        }
+
+        guard let tagName = release["tag_name"] as? String else {
+            throw UpdateError.invalidResponse
+        }
+
+        let version = normalizedVersion(from: tagName)
+        let downloadURL = ((release["assets"] as? [[String: Any]]) ?? [])
+            .compactMap { $0["browser_download_url"] as? String }
+            .first { $0.hasSuffix(".dmg") }
+            .flatMap(URL.init(string:))
+
+        return ReleaseInfo(
+            version: version,
+            downloadURL: downloadURL ?? fallbackDownloadURL(forVersion: version)
+        )
+    }
+
+    private func fetchLatestReleaseFromLatestPage() async throws -> ReleaseInfo {
+        let (_, response) = try await URLSession.shared.data(from: webLatestReleaseURL)
+
+        guard let finalURL = response.url,
+              let tagName = finalURL.pathComponents.last,
+              tagName.hasPrefix("v") else {
+            throw UpdateError.invalidResponse
+        }
+
+        let version = normalizedVersion(from: tagName)
+        return ReleaseInfo(
+            version: version,
+            downloadURL: fallbackDownloadURL(forVersion: version)
+        )
+    }
+
+    private func normalizedVersion(from tagName: String) -> String {
+        tagName.hasPrefix("v") ? String(tagName.dropFirst()) : tagName
+    }
+
+    private func fallbackDownloadURL(forVersion version: String) -> URL? {
+        URL(string: "\(releaseDownloadBaseURL)/v\(version)/Menucal-\(version).dmg")
+    }
+
+    private func releaseErrorMessage(from data: Data) -> String? {
+        guard let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] else {
+            return nil
+        }
+
+        return json["message"] as? String
     }
 
     private func compareVersions(_ v1: String, _ v2: String) -> ComparisonResult {
@@ -151,13 +216,13 @@ class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
 
         do {
             let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-            let appDir = appSupportDir.appendingPathComponent("MacCalendar")
+            let appDir = appSupportDir.appendingPathComponent("Menucal")
             
             if !FileManager.default.fileExists(atPath: appDir.path) {
                 try FileManager.default.createDirectory(at: appDir, withIntermediateDirectories: true)
             }
             
-            let destinationURL = appDir.appendingPathComponent("MacCalendar.dmg")
+            let destinationURL = appDir.appendingPathComponent("Menucal.dmg")
 
             if FileManager.default.fileExists(atPath: destinationURL.path) {
                 try FileManager.default.removeItem(at: destinationURL)

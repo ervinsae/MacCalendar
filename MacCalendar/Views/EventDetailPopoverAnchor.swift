@@ -1,6 +1,6 @@
 //
 //  EventDetailPopoverAnchor.swift
-//  MacCalendar
+//  Menucal
 //
 //  Created by Codex on 2026/7/8.
 //

@@ -32,7 +32,7 @@ jobs:
         run: |
           RAW_TAG="${GITHUB_REF_NAME}"
           APP_VERSION="${RAW_TAG#v}"
-          DMG_NAME="MacCalendar-${APP_VERSION}.dmg"
+          DMG_NAME="Menucal-${APP_VERSION}.dmg"
 
           echo "app_version=${APP_VERSION}" >> "$GITHUB_OUTPUT"
           echo "dmg_name=${DMG_NAME}" >> "$GITHUB_OUTPUT"
@@ -59,15 +59,15 @@ jobs:
       - name: Create DMG package
         run: |
           mkdir -p dmg_source
-          cp -r build/Release/MacCalendar.app dmg_source/
+          cp -r build/Release/Menucal.app dmg_source/
 
           create-dmg \
-            --volname "MacCalendar Installer" \
+            --volname "Menucal Installer" \
             --window-pos 200 120 \
             --window-size 600 400 \
             --icon-size 100 \
-            --icon "MacCalendar.app" 150 120 \
-            --hide-extension "MacCalendar.app" \
+            --icon "Menucal.app" 150 120 \
+            --hide-extension "Menucal.app" \
             --app-drop-link 450 120 \
             "${{ steps.release_meta.outputs.dmg_name }}" \
             "dmg_source/"
@@ -77,7 +77,7 @@ jobs:
         with:
           files: ${{ steps.release_meta.outputs.dmg_name }}
           tag_name: ${{ github.ref_name }}
-          name: "MacCalendar ${{ github.ref_name }}"
+          name: "Menucal ${{ github.ref_name }}"
           generate_release_notes: true
           draft: false
           prerelease: false

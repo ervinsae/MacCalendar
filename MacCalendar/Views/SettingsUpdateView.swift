@@ -1,6 +1,6 @@
 //
 //  SettingsUpdateView.swift
-//  MacCalendar
+//  Menucal
 //
 //  Created by ruihelin on 2026/4/28.
 //
