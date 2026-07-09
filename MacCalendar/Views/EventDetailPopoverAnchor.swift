@@ -8,20 +8,20 @@
 import SwiftUI
 import AppKit
 
+final class EventDetailPopoverAnchorBox {
+    weak var view: NSView?
+}
+
 struct EventDetailPopoverAnchor: NSViewRepresentable {
-    let onResolve: (NSView) -> Void
+    let box: EventDetailPopoverAnchorBox
 
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
-        DispatchQueue.main.async {
-            onResolve(view)
-        }
+        box.view = view
         return view
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        DispatchQueue.main.async {
-            onResolve(nsView)
-        }
+        box.view = nsView
     }
 }

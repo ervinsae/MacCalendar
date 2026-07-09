@@ -12,7 +12,7 @@ struct EventListItemView: View {
     let event: CalendarEvent
     @ObservedObject var calendarManager: CalendarManager
 
-    @State private var anchorView: NSView?
+    @State private var anchorBox = EventDetailPopoverAnchorBox()
     @State private var isHovering = false
 
     private var timeText: String {
@@ -50,7 +50,7 @@ struct EventListItemView: View {
     private func handleTap() {
         AppDelegate.shared?.toggleEventDetailPopover(
             event: event,
-            relativeTo: anchorView
+            relativeTo: anchorBox.view
         )
     }
 
@@ -94,9 +94,7 @@ struct EventListItemView: View {
         .padding(.horizontal, 5)
         .background(hoverBackground)
         .background {
-            EventDetailPopoverAnchor { view in
-                anchorView = view
-            }
+            EventDetailPopoverAnchor(box: anchorBox)
         }
         .contentShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
         .onHover { hovering in
