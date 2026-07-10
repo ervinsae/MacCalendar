@@ -42,63 +42,21 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Import Developer ID certificate
-        env:
-          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
-          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          if [ -z "$MACOS_CERTIFICATE_P12" ] || [ -z "$MACOS_CERTIFICATE_PASSWORD" ] || [ -z "$KEYCHAIN_PASSWORD" ]; then
-            echo "Missing Developer ID signing secrets."
-            echo "Required secrets: MACOS_CERTIFICATE_P12, MACOS_CERTIFICATE_PASSWORD, KEYCHAIN_PASSWORD."
-            exit 1
-          fi
-
-          CERTIFICATE_PATH="$RUNNER_TEMP/developer-id.p12"
-          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
-
-          echo "$MACOS_CERTIFICATE_P12" | base64 --decode > "$CERTIFICATE_PATH"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security import "$CERTIFICATE_PATH" \
-            -P "$MACOS_CERTIFICATE_PASSWORD" \
-            -A \
-            -t cert \
-            -f pkcs12 \
-            -k "$KEYCHAIN_PATH"
-          security list-keychain -d user -s "$KEYCHAIN_PATH"
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-
       - name: Build SwiftUI App
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          DEVELOPER_ID_APPLICATION: ${{ secrets.DEVELOPER_ID_APPLICATION }}
         run: |
-          if [ -z "$APPLE_TEAM_ID" ] || [ -z "$DEVELOPER_ID_APPLICATION" ]; then
-            echo "Missing Developer ID signing configuration."
-            echo "Required secrets: APPLE_TEAM_ID, DEVELOPER_ID_APPLICATION."
-            exit 1
-          fi
-
           xcodebuild clean build \
             -project "MacCalendar.xcodeproj" \
             -scheme "MacCalendar" \
             -configuration Release \
-            CODE_SIGNING_ALLOWED=YES \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="$DEVELOPER_ID_APPLICATION" \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-            OTHER_CODE_SIGN_FLAGS="--timestamp" \
+            CODE_SIGNING_ALLOWED=NO \
             SYMROOT=$(pwd)/build \
             OBJROOT=$(pwd)/build
 
-      - name: Verify app signature
+      - name: Apply and verify ad-hoc signature
         run: |
+          codesign --force --deep --sign - "build/Release/Menucal.app"
           codesign --verify --deep --strict --verbose=2 "build/Release/Menucal.app"
           codesign -dv --verbose=4 "build/Release/Menucal.app"
-          spctl -a -vvv -t exec "build/Release/Menucal.app" || \
-            echo "Gatekeeper assessment can fail before notarization; codesign verification passed."
 
       - name: Install create-dmg
         run: brew install create-dmg
@@ -119,16 +77,9 @@ jobs:
             "${{ steps.release_meta.outputs.dmg_name }}" \
             "dmg_source/"
 
-      - name: Sign and verify DMG
-        env:
-          DEVELOPER_ID_APPLICATION: ${{ secrets.DEVELOPER_ID_APPLICATION }}
+      - name: Verify DMG package
         run: |
-          codesign --force --timestamp \
-            --sign "$DEVELOPER_ID_APPLICATION" \
-            "${{ steps.release_meta.outputs.dmg_name }}"
-          codesign --verify --verbose=2 "${{ steps.release_meta.outputs.dmg_name }}"
-          spctl -a -vvv -t open --context context:primary-signature "${{ steps.release_meta.outputs.dmg_name }}" || \
-            echo "Gatekeeper assessment can fail before notarization; DMG codesign verification passed."
+          hdiutil verify "${{ steps.release_meta.outputs.dmg_name }}"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
