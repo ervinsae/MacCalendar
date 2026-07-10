@@ -43,9 +43,16 @@ struct CalendarView: View {
         DateHelper.formatDate(date: calendarManager.selectedMonth, format: "M月 yyyy")
     }
 
+    private var selectedLunarDateTitle: String {
+        LunarDateHelper.getLunarDateDisplay(for: calendarManager.selectedDay)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            header
+            VStack(spacing: 0) {
+                header
+                lunarDateHeader
+            }
                 .padding(.init(top: 10, leading: 12, bottom: 8, trailing: 12))
 
             VStack(spacing: 3) {
@@ -93,6 +100,15 @@ struct CalendarView: View {
             }
         }
         .frame(height: 18)
+    }
+
+    private var lunarDateHeader: some View {
+        Text(selectedLunarDateTitle)
+            .font(.system(size: 10, weight: .medium, design: .rounded))
+            .foregroundStyle(ItsycalPalette.secondaryText)
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.init(top: 2, leading: 0, bottom: 2, trailing: 10))
     }
 
     private var weekdayHeader: some View {

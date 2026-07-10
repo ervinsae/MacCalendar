@@ -82,6 +82,11 @@ struct LunarDateHelper {
         guard lunarDay >= 1 && lunarDay <= 30 else { return "" }
         return lunarDaySymbols[lunarDay - 1]
     }
+
+    /// 根据公历日期生成完整的中文农历日期，例如“丙午年五月廿六”。
+    static func getLunarDateDisplay(for date: Date) -> String {
+        getGanzhiYear(for: date) + getLunarMonth(for: date) + getLunarDay(for: date)
+    }
     
     /**
      根据公历日期，准确获取其对应的生肖
