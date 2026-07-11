@@ -25,6 +25,34 @@ enum FirstDayInWeek:String,CaseIterable,Identifiable{
     var id:Self{self}
 }
 
+enum HighlightWeekday: Int, CaseIterable, Identifiable {
+    case monday = 2
+    case tuesday = 3
+    case wednesday = 4
+    case thursday = 5
+    case friday = 6
+    case saturday = 7
+    case sunday = 1
+
+    var id: Int { rawValue }
+
+    var title: String {
+        switch self {
+        case .monday: return "周一"
+        case .tuesday: return "周二"
+        case .wednesday: return "周三"
+        case .thursday: return "周四"
+        case .friday: return "周五"
+        case .saturday: return "周六"
+        case .sunday: return "周日"
+        }
+    }
+
+    var mask: Int {
+        1 << (rawValue - 1)
+    }
+}
+
 enum UpdateCheckFrequency: String, CaseIterable, Identifiable {
     case daily = "每天"
     case weekly = "每周"
@@ -77,4 +105,6 @@ struct SettingsManager {
     @AppStorage("updateCheckFrequency") static var updateCheckFrequency: UpdateCheckFrequency = .weekly
     @AppStorage("showDaysIndicator") static var showDaysIndicator = true
     @AppStorage("appearanceMode") static var appearanceMode: AppearanceMode = .system
+    @AppStorage("highlightedWeekdayMask") static var highlightedWeekdayMask: Int = HighlightWeekday.saturday.mask | HighlightWeekday.sunday.mask
+    @AppStorage("hourlyChimeEnabled") static var hourlyChimeEnabled = true
 }

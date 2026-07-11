@@ -24,6 +24,7 @@ final class HourlyChimeService: NSObject {
     }
 
     func start() {
+        guard timer == nil else { return }
         scheduleNextChime(after: Date())
     }
 

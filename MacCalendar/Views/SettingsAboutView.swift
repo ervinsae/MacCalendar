@@ -5,134 +5,116 @@
 //  Created by ruihelin on 2025/10/6.
 //
 
+import AppKit
 import SwiftUI
 
 struct SettingsAboutView: View {
+    private let features = [
+        AboutFeature(symbol: "calendar", title: "日历视图"),
+        AboutFeature(symbol: "list.bullet.clipboard", title: "日程管理"),
+        AboutFeature(symbol: "moon.stars", title: "农历支持"),
+        AboutFeature(symbol: "sun.max", title: "24 节气"),
+        AboutFeature(symbol: "paintbrush", title: "个性化配置"),
+        AboutFeature(symbol: "flag", title: "中国假期"),
+        AboutFeature(symbol: "speaker.wave.2", title: "整点报时"),
+        AboutFeature(symbol: "heart", title: "开源免费")
+    ]
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .center, spacing: 20) {
-                // 应用名称和描述
-                VStack(alignment: .center, spacing: 8) {
-                    Text("Menucal")
-                        .font(.title)
-                        .fontWeight(.bold)
-                    Text("完全免费且开源的 macOS 小而美菜单栏日历")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
+        Form {
+            Section {
+                HStack(spacing: 14) {
+                    Image(nsImage: NSApplication.shared.applicationIconImage)
+                        .resizable()
+                        .interpolation(.high)
+                        .frame(width: 52, height: 52)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text("Menucal")
+                                .font(.system(size: 20, weight: .semibold, design: .rounded))
+
+                            Text("版本 \(Bundle.main.appVersion ?? "1.0.0")")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Text("完全免费且开源的 macOS 小而美菜单栏日历")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer(minLength: 0)
                 }
                 .frame(maxWidth: .infinity)
+                .padding(.vertical, 4)
+            }
 
-                // 应用信息
-                VStack(alignment: .center, spacing: 12) {
-                    // 版本信息
-                    HStack(alignment: .center, spacing: 8) {
-                        Image(systemName: "info.circle")
-                            .foregroundColor(.secondary)
-                        Text("版本 \(Bundle.main.appVersion ?? "1.0.0")")
-                            .font(.body)
-                    }
-
-                    // GitHub链接
-                    Link(destination: URL(string:"https://github.com/ervinsae/Menucal")!) {
-                        HStack(alignment: .center, spacing: 8) {
-                            Image("github-logo")
-                                .renderingMode(.template)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 20, height: 20)
-                                .foregroundColor(.primary)
-                            Text("GitHub 仓库")
-                                .font(.body)
-                        }
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 20)
-                        .background(Color.secondary.opacity(0.1))
-                        .cornerRadius(8)
+            Section("核心功能") {
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), alignment: .leading), count: 2),
+                    alignment: .leading,
+                    spacing: 4
+                ) {
+                    ForEach(features) { feature in
+                        AboutFeatureRow(feature: feature)
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 20)
+            }
 
-                // 功能特点
-                VStack(alignment: .center, spacing: 12) {
-                    Text("功能特点")
-                        .font(.headline)
-                        .fontWeight(.semibold)
+            Section {
+                Link(destination: URL(string: "https://github.com/ervinsae/Menucal")!) {
+                    HStack(spacing: 10) {
+                        Image("github-logo")
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 16, height: 16)
 
-                    VStack(spacing: 20) {
-                        HStack(spacing: 20) {
-                            FeatureItem(symbol: "calendar", title: "日历视图")
-                            FeatureItem(symbol: "list.bullet.clipboard", title: "日程管理")
-                            FeatureItem(symbol: "moon.stars", title: "农历支持")
-                            FeatureItem(symbol: "sun.max", title: "24节气")
-                        }
-                        HStack(spacing: 20) {
-                            FeatureItem(symbol: "paintbrush", title: "个性化配置")
-                            FeatureItem(symbol: "flag", title: "中国假期")
-                            FeatureItem(symbol: "star", title: "开源免费")
-                        }
+                        Text("GitHub 仓库")
+
+                        Spacer()
+
+                        Image(systemName: "arrow.up.right.square")
+                            .foregroundStyle(.secondary)
                     }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            } header: {
+                Text("项目信息")
+            } footer: {
+                Text("© 2026 Menucal")
                     .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 20)
-                }
-                .frame(maxWidth: .infinity)
-
-                // 版权信息
-                VStack(alignment: .center, spacing: 4) {
-                    Text("© 2026 Menucal")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.top, 10)
+                    .padding(.top, 6)
             }
         }
+        .formStyle(.grouped)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
-// 功能特点项组件
-struct FeatureItem: View {
+private struct AboutFeature: Identifiable {
     let symbol: String
     let title: String
 
-    var body: some View {
-        VStack(alignment: .center, spacing: 6) {
-            Image(systemName: symbol)
-                .font(.system(size: 20))
-                .foregroundColor(.blue)
-                .frame(width: 40, height: 40)
-                .background(Color.blue.opacity(0.1))
-                .cornerRadius(10)
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-    }
+    var id: String { title }
 }
 
-// 设置卡片组件
-struct SettingsCard<Content: View>: View {
-    let content: Content
-
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
+private struct AboutFeatureRow: View {
+    let feature: AboutFeature
 
     var body: some View {
-        VStack(alignment: .leading) {
-            content
+        HStack(spacing: 8) {
+            Image(systemName: feature.symbol)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.tint)
+                .frame(width: 18)
+
+            Text(feature.title)
+                .font(.callout)
         }
-        .padding(16)
-        .background(Color(.windowBackgroundColor))
-        .cornerRadius(12)
-        .shadow(color: .gray.opacity(0.1), radius: 4, x: 0, y: 2)
-        .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

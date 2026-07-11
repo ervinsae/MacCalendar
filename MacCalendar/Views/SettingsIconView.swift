@@ -17,6 +17,8 @@ struct SettingsIconView: View {
     @AppStorage("showWeekNumber") private var showWeekNumber: Bool = SettingsManager.showWeekNumber
     @AppStorage("showDaysIndicator") private var showDaysIndicator: Bool = SettingsManager.showDaysIndicator
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = SettingsManager.appearanceMode
+    @AppStorage("highlightedWeekdayMask") private var highlightedWeekdayMask: Int = SettingsManager.highlightedWeekdayMask
+    @AppStorage("hourlyChimeEnabled") private var hourlyChimeEnabled: Bool = SettingsManager.hourlyChimeEnabled
     
     var body: some View {
         Form {
@@ -66,10 +68,40 @@ struct SettingsIconView: View {
                 
                 Toggle("显示周数", isOn: $showWeekNumber)
                 Toggle("显示天数指示器", isOn: $showDaysIndicator)
+                Toggle("开启整点报时", isOn: $hourlyChimeEnabled)
             }
+
+            Section("高亮星期") {
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), alignment: .leading), count: 4),
+                    alignment: .leading,
+                    spacing: 8
+                ) {
+                    ForEach(HighlightWeekday.allCases) { weekday in
+                        Toggle(weekday.title, isOn: highlightBinding(for: weekday))
+                            .toggleStyle(.checkbox)
+                    }
+                }
+            }
+
         }
         .formStyle(.grouped)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func highlightBinding(for weekday: HighlightWeekday) -> Binding<Bool> {
+        Binding(
+            get: {
+                highlightedWeekdayMask & weekday.mask != 0
+            },
+            set: { isHighlighted in
+                if isHighlighted {
+                    highlightedWeekdayMask |= weekday.mask
+                } else {
+                    highlightedWeekdayMask &= ~weekday.mask
+                }
+            }
+        )
     }
 }
 

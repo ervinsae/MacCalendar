@@ -11,6 +11,8 @@ struct CalendarView: View {
     @StateObject var calendarManager: CalendarManager
     var performSelection: (@escaping () -> Void) -> Void = { action in action() }
 
+    @AppStorage("highlightedWeekdayMask") private var highlightedWeekdayMask: Int = SettingsManager.highlightedWeekdayMask
+
     @FocusState private var focusedField: DateField?
 
     enum DateField {
@@ -29,10 +31,6 @@ struct CalendarView: View {
             repeating: GridItem(.flexible(minimum: 21, maximum: 26), spacing: 0),
             count: columnCount
         )
-    }
-
-    private var highlightedWeekdayValues: Set<Int> {
-        [1, 7]
     }
 
     private var highlightedColumnColor: Color {
@@ -184,7 +182,8 @@ struct CalendarView: View {
 
     private func isHighlightedColumn(_ index: Int) -> Bool {
         guard let weekday = weekdayValue(forColumnIndex: index) else { return false }
-        return highlightedWeekdayValues.contains(weekday)
+        let weekdayMask = 1 << (weekday - 1)
+        return highlightedWeekdayMask & weekdayMask != 0
     }
 
     private func weekdayValue(forColumnIndex index: Int) -> Int? {

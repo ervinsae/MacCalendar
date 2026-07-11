@@ -32,7 +32,7 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate, NSPopoverDe
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
-        hourlyChimeService.start()
+        updateHourlyChimeState()
 
         _ = calendarManager
 
@@ -155,13 +155,14 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate, NSPopoverDe
 
         updateAppearance()
 
-        // 监听外观设置变化
+        // 监听需要即时生效的设置变化
         appearanceObserver = NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
             self?.updateAppearance()
+            self?.updateHourlyChimeState()
         }
 
         NotificationCenter.default.addObserver(self, selector: #selector(closePopover), name: NSApplication.didResignActiveNotification, object: nil)
@@ -228,6 +229,14 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate, NSPopoverDe
         updateContentHostAppearance()
         settingsWindow?.appearance = mode.nsAppearance
         eventEditWindow?.appearance = mode.nsAppearance
+    }
+
+    private func updateHourlyChimeState() {
+        if SettingsManager.hourlyChimeEnabled {
+            hourlyChimeService.start()
+        } else {
+            hourlyChimeService.stop()
+        }
     }
 
     func toggleEventDetailPopover(event: CalendarEvent, relativeTo anchorView: NSView?) {
