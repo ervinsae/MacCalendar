@@ -15,7 +15,6 @@ struct SettingsIconView: View {
     @AppStorage("doubleLineBottomFormat") private var doubleLineBottomFormat: String = SettingsManager.doubleLineBottomFormat
     @AppStorage("firstDayInWeek") private var firstDayInWeek: FirstDayInWeek = SettingsManager.firstDayInWeek
     @AppStorage("showWeekNumber") private var showWeekNumber: Bool = SettingsManager.showWeekNumber
-    @AppStorage("showDaysIndicator") private var showDaysIndicator: Bool = SettingsManager.showDaysIndicator
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = SettingsManager.appearanceMode
     @AppStorage("highlightedWeekdayMask") private var highlightedWeekdayMask: Int = SettingsManager.highlightedWeekdayMask
     @AppStorage("hourlyChimeEnabled") private var hourlyChimeEnabled: Bool = SettingsManager.hourlyChimeEnabled
@@ -67,7 +66,6 @@ struct SettingsIconView: View {
                 .pickerStyle(.radioGroup)
                 
                 Toggle("显示周数", isOn: $showWeekNumber)
-                Toggle("显示天数指示器", isOn: $showDaysIndicator)
                 Toggle("开启整点报时", isOn: $hourlyChimeEnabled)
             }
 

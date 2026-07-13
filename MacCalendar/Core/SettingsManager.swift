@@ -103,7 +103,6 @@ struct SettingsManager {
     @AppStorage("firstDayInWeek") static var firstDayInWeek:FirstDayInWeek = .monday
     @AppStorage("showWeekNumber") static var showWeekNumber = false
     @AppStorage("updateCheckFrequency") static var updateCheckFrequency: UpdateCheckFrequency = .weekly
-    @AppStorage("showDaysIndicator") static var showDaysIndicator = true
     @AppStorage("appearanceMode") static var appearanceMode: AppearanceMode = .system
     @AppStorage("highlightedWeekdayMask") static var highlightedWeekdayMask: Int = HighlightWeekday.saturday.mask | HighlightWeekday.sunday.mask
     @AppStorage("hourlyChimeEnabled") static var hourlyChimeEnabled = true

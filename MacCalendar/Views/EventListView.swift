@@ -70,7 +70,6 @@ struct EventListView: View {
 
     private static func visibleEvents(_ events: [CalendarEvent], excludingAllDayTitle title: String? = nil) -> [CalendarEvent] {
         events.filter { event in
-            guard !event.id.hasPrefix("days-indicator-") else { return false }
             guard let title else { return true }
             return !(event.isAllDay && event.title == title)
         }
@@ -183,7 +182,6 @@ struct EventListView: View {
 
     private func visibleEvents(_ events: [CalendarEvent], excludingAllDayTitle title: String? = nil) -> [CalendarEvent] {
         events.filter { event in
-            guard !event.id.hasPrefix("days-indicator-") else { return false }
             guard let title else { return true }
             return !(event.isAllDay && event.title == title)
         }
