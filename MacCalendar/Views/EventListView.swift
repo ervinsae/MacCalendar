@@ -147,7 +147,7 @@ struct EventListView: View {
             }
             Spacer().frame(width: 10)
             ItsycalToolbarButton(systemName: "gearshape.fill", size: 13.5, help: "日历设置") {
-                AppDelegate.shared?.showSettingsWindowWithSelection(.calendar)
+                AppDelegate.shared?.showSettingsWindow()
             }
         }
         .foregroundStyle(ItsycalPalette.secondaryText)
