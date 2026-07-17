@@ -9,6 +9,7 @@ import SwiftUI
 
 struct EventListView: View {
     @StateObject var calendarManager: CalendarManager
+    @ObservedObject var popoverPresentationState: PopoverPresentationState
 
     private let calendar = Calendar.Based
 
@@ -140,7 +141,18 @@ struct EventListView: View {
                 AppDelegate.shared?.openNewEventWindow()
             }
             Spacer()
-            ItsycalToolbarButton(systemName: "pin.fill", size: 11, help: "固定弹窗") {}
+            ItsycalToolbarButton(
+                systemName: popoverPresentationState.isPinned ? "pin.fill" : "pin",
+                size: 11,
+                help: popoverPresentationState.isPinned ? "取消固定" : "固定弹窗"
+            ) {
+                AppDelegate.shared?.togglePopoverPinned()
+            }
+            .foregroundStyle(
+                popoverPresentationState.isPinned
+                    ? ItsycalPalette.selectionBlue
+                    : ItsycalPalette.secondaryText
+            )
             Spacer().frame(width: 10)
             ItsycalToolbarButton(systemName: "calendar", size: 13, help: "打开系统日历") {
                 AppDelegate.shared?.openSystemCalendar()

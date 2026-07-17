@@ -9,6 +9,14 @@ import SwiftUI
 import AppKit
 import Combine
 
+final class PopoverPresentationState: ObservableObject {
+    @Published private(set) var isPinned = false
+
+    fileprivate func setPinned(_ isPinned: Bool) {
+        self.isPinned = isPinned
+    }
+}
+
 class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate, NSPopoverDelegate {
     static var shared:AppDelegate?
 
@@ -18,6 +26,7 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate, NSPopoverDe
     var eventEditWindow:NSWindow?
     var hostingController: NSHostingController<AnyView>?
     lazy var calendarManager: CalendarManager = CalendarManager()
+    let popoverPresentationState = PopoverPresentationState()
 
     private var preferredPopoverSize: CGSize = .zero
     private var eventDetailPopover: NSPopover?
@@ -60,6 +69,10 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate, NSPopoverDe
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.modifierFlags.contains(.command) && event.characters == "," {
                 self?.showSettingsWindow()
+                return nil
+            }
+            if event.keyCode == 53, self?.popover?.isShown == true {
+                self?.closePopover()
                 return nil
             }
             return event
@@ -142,7 +155,10 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate, NSPopoverDe
         popover = NSPopover()
         popover.behavior = .transient
 
-        let contentView = ContentView(calendarManager: self.calendarManager)
+        let contentView = ContentView(
+            calendarManager: self.calendarManager,
+            popoverPresentationState: popoverPresentationState
+        )
             .onPreferenceChange(SizeKey.self){ size in
                 guard size != .zero else { return }
                 self.applyPopoverSizeIfNeeded(size)
@@ -165,7 +181,12 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate, NSPopoverDe
             self?.updateHourlyChimeState()
         }
 
-        NotificationCenter.default.addObserver(self, selector: #selector(closePopover), name: NSApplication.didResignActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleApplicationDidResignActive),
+            name: NSApplication.didResignActiveNotification,
+            object: nil
+        )
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -382,7 +403,7 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate, NSPopoverDe
         }
 
         if popover.isShown {
-            popover.performClose(nil)
+            closePopover()
         } else {
             isPopoverAnimating = true
 
@@ -402,7 +423,23 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate, NSPopoverDe
         }
     }
 
+    func togglePopoverPinned() {
+        setPopoverPinned(!popoverPresentationState.isPinned)
+    }
+
+    private func setPopoverPinned(_ isPinned: Bool) {
+        guard popoverPresentationState.isPinned != isPinned else { return }
+        popoverPresentationState.setPinned(isPinned)
+        popover.behavior = isPinned ? .applicationDefined : .transient
+    }
+
+    @objc private func handleApplicationDidResignActive() {
+        guard !popoverPresentationState.isPinned else { return }
+        closePopover()
+    }
+
     @objc func closePopover() {
+        setPopoverPinned(false)
         closeEventDetailPopover()
         popover.performClose(nil)
     }

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject var calendarManager: CalendarManager
+    @ObservedObject var popoverPresentationState: PopoverPresentationState
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = SettingsManager.appearanceMode
 
     static func preferredSize(calendarManager: CalendarManager) -> CGSize {
@@ -40,7 +41,10 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             CalendarView(calendarManager: calendarManager, performSelection: performAfterDismissingEventPopover)
-            EventListView(calendarManager: calendarManager)
+            EventListView(
+                calendarManager: calendarManager,
+                popoverPresentationState: popoverPresentationState
+            )
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(width: Self.contentWidth)

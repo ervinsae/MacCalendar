@@ -48,9 +48,25 @@ jobs:
             -project "MacCalendar.xcodeproj" \
             -scheme "MacCalendar" \
             -configuration Release \
+            -destination "generic/platform=macOS" \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
             CODE_SIGNING_ALLOWED=NO \
             SYMROOT=$(pwd)/build \
             OBJROOT=$(pwd)/build
+
+      - name: Verify Universal Binary
+        run: |
+          APP_BINARY="build/Release/Menucal.app/Contents/MacOS/Menucal"
+          ARCHITECTURES="$(lipo -archs "$APP_BINARY")"
+
+          echo "Architectures: $ARCHITECTURES"
+          lipo -info "$APP_BINARY"
+
+          if [[ " $ARCHITECTURES " != *" arm64 "* || " $ARCHITECTURES " != *" x86_64 "* ]]; then
+            echo "Expected a Universal Binary containing arm64 and x86_64."
+            exit 1
+          fi
 
       - name: Apply and verify ad-hoc signature
         run: |
