@@ -8,7 +8,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/SwiftUI-EC662F?style=flat&logo=swift&logoColor=white" alt="SwiftUI" />
-  <a href="https://github.com/ervinsae/Menucal/releases/latest"><img src="https://img.shields.io/badge/macOS-14.6+-green.svg" alt="macOS 14.6+" /></a>
+  <a href="https://github.com/ervinsae/Menucal/releases/latest"><img src="https://img.shields.io/badge/macOS-13.3+-green.svg" alt="macOS 13.3+" /></a>
   <img src="https://img.shields.io/github/v/release/ervinsae/Menucal" alt="GitHub Release" />
 </p>
 
@@ -49,7 +49,7 @@ cd Menucal
 open MacCalendar.xcodeproj
 ```
 
-Menucal 使用 SwiftUI、AppKit、EventKit 和 AVFoundation 开发，最低支持 macOS 14.6。
+Menucal 使用 SwiftUI、AppKit、EventKit 和 AVFoundation 开发，最低支持 macOS 13.3。
 
 ## 隐私
 

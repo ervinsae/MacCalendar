@@ -57,14 +57,22 @@ jobs:
 
       - name: Verify Universal Binary
         run: |
+          APP_BUNDLE="build/Release/Menucal.app"
           APP_BINARY="build/Release/Menucal.app/Contents/MacOS/Menucal"
           ARCHITECTURES="$(lipo -archs "$APP_BINARY")"
+          MINIMUM_SYSTEM_VERSION="$(/usr/libexec/PlistBuddy -c "Print :LSMinimumSystemVersion" "$APP_BUNDLE/Contents/Info.plist")"
 
           echo "Architectures: $ARCHITECTURES"
+          echo "Minimum macOS version: $MINIMUM_SYSTEM_VERSION"
           lipo -info "$APP_BINARY"
 
           if [[ " $ARCHITECTURES " != *" arm64 "* || " $ARCHITECTURES " != *" x86_64 "* ]]; then
             echo "Expected a Universal Binary containing arm64 and x86_64."
+            exit 1
+          fi
+
+          if [[ "$MINIMUM_SYSTEM_VERSION" != "13.3" ]]; then
+            echo "Expected minimum macOS version 13.3."
             exit 1
           fi
 

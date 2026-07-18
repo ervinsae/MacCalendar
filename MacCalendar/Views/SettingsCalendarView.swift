@@ -14,6 +14,25 @@ struct SettingsCalendarView: View {
     
     var body: some View {
         Form {
+            authorizationContent
+        }
+        .formStyle(.grouped)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .task {
+            await refreshCalendarAccess()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            Task {
+                await refreshCalendarAccess()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var authorizationContent: some View {
+        if calendarManager.hasCalendarAccess {
+            calendarContent
+        } else {
             switch calendarManager.authorizationStatus {
             case .notDetermined:
                 permissionSection(
@@ -45,38 +64,29 @@ struct SettingsCalendarView: View {
                 ) {
                     openCalendarPrivacySettings()
                 }
-            case .writeOnly:
-                permissionSection(
-                    icon: "calendar.badge.exclamationmark",
-                    title: "需要完整日历访问权限",
-                    message: "Menucal 当前只能添加事件，无法读取并显示已有日程。请改为允许完全访问。",
-                    actionTitle: "打开系统设置",
-                    actionIcon: "gear"
-                ) {
-                    openCalendarPrivacySettings()
+            default:
+                if #available(macOS 14.0, *),
+                   calendarManager.authorizationStatus == .writeOnly {
+                    permissionSection(
+                        icon: "calendar.badge.exclamationmark",
+                        title: "需要完整日历访问权限",
+                        message: "Menucal 当前只能添加事件，无法读取并显示已有日程。请改为允许完全访问。",
+                        actionTitle: "打开系统设置",
+                        actionIcon: "gear"
+                    ) {
+                        openCalendarPrivacySettings()
+                    }
+                } else {
+                    permissionSection(
+                        icon: "calendar.badge.exclamationmark",
+                        title: "无法访问日历",
+                        message: "请前往系统设置检查 Menucal 的日历访问权限。",
+                        actionTitle: "打开系统设置",
+                        actionIcon: "gear"
+                    ) {
+                        openCalendarPrivacySettings()
+                    }
                 }
-            case .fullAccess, .authorized:
-                calendarContent
-            @unknown default:
-                permissionSection(
-                    icon: "calendar.badge.exclamationmark",
-                    title: "无法访问日历",
-                    message: "请前往系统设置检查 Menucal 的日历访问权限。",
-                    actionTitle: "打开系统设置",
-                    actionIcon: "gear"
-                ) {
-                    openCalendarPrivacySettings()
-                }
-            }
-        }
-        .formStyle(.grouped)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .task {
-            await refreshCalendarAccess()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            Task {
-                await refreshCalendarAccess()
             }
         }
     }
@@ -184,7 +194,7 @@ struct SettingsCalendarView: View {
         defer { isRequestingAccess = false }
 
         await calendarManager.requestAccessIfNeeded()
-        if calendarManager.authorizationStatus == .fullAccess {
+        if calendarManager.hasCalendarAccess {
             await calendarManager.loadCalendarInfo()
         }
     }

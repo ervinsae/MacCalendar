@@ -59,8 +59,8 @@ struct LunarDateHelper {
      */
     static func getLunarMonth(for date: Date) -> String {
         let chineseCalendar = Calendar(identifier: .chinese)
-        // 同时提取月份和是否为闰月的标识
-        let components = chineseCalendar.dateComponents([.month, .isLeapMonth], from: date)
+        // dateComponents(in:from:) also exposes the leap-month flag on macOS 13.
+        let components = chineseCalendar.dateComponents(in: chineseCalendar.timeZone, from: date)
         
         guard let lunarMonth = components.month, lunarMonth >= 1 && lunarMonth <= 12 else {
             return ""

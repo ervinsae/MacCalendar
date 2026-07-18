@@ -19,6 +19,13 @@ class CalendarManager: ObservableObject {
     @Published var selectedDayEvents: [CalendarEvent] = []
     @Published var authorizationStatus: EKAuthorizationStatus = .notDetermined
     @Published var weekdays:[String] = []
+
+    var hasCalendarAccess: Bool {
+        if #available(macOS 14.0, *) {
+            return authorizationStatus == .fullAccess || authorizationStatus == .authorized
+        }
+        return authorizationStatus == .authorized
+    }
     
     private let calendar = Calendar.Based
     private let eventStore = EKEventStore()
@@ -159,7 +166,7 @@ class CalendarManager: ObservableObject {
             return
         }
         
-        guard authorizationStatus == .fullAccess else {
+        guard hasCalendarAccess else {
             let days = await generateCalendarGrid(for: date, events: [:])
             // 缓存无事件的日历数据
             calendarDataCache[monthStart] = days
@@ -185,7 +192,7 @@ class CalendarManager: ObservableObject {
     
     func loadCalendarInfo() async {
         await requestAccessIfNeeded()
-        guard authorizationStatus == .fullAccess else { return }
+        guard hasCalendarAccess else { return }
         
         let allEKCalendars = eventStore.calendars(for: .event)
         
@@ -214,7 +221,7 @@ class CalendarManager: ObservableObject {
     }
     
     func createEvent(event: CalendarEvent) async throws {
-        guard authorizationStatus == .fullAccess else {
+        guard hasCalendarAccess else {
             throw CalendarError.noPermission
         }
 
@@ -241,7 +248,7 @@ class CalendarManager: ObservableObject {
     }
 
     func updateEvent(event: CalendarEvent) async throws {
-        guard authorizationStatus == .fullAccess else {
+        guard hasCalendarAccess else {
             throw CalendarError.noPermission
         }
         
@@ -270,7 +277,7 @@ class CalendarManager: ObservableObject {
     }
     
     func deleteEvent(withId eventId: String) async throws {
-        guard authorizationStatus == .fullAccess else {
+        guard hasCalendarAccess else {
             throw CalendarError.noPermission
         }
         
@@ -327,8 +334,12 @@ class CalendarManager: ObservableObject {
         guard status == .notDetermined else { return }
         
         do {
-            let granted = try await eventStore.requestFullAccessToEvents()
-            authorizationStatus = granted ? .fullAccess : .denied
+            if #available(macOS 14.0, *) {
+                _ = try await eventStore.requestFullAccessToEvents()
+            } else {
+                _ = try await eventStore.requestAccess(to: .event)
+            }
+            authorizationStatus = EKEventStore.authorizationStatus(for: .event)
         } catch {
             authorizationStatus = .denied
         }
@@ -518,7 +529,7 @@ class CalendarManager: ObservableObject {
         var newDays: [CalendarDay] = []
         
         for day in gridDates {
-            let lunarDateComponents = lunarCalendar.dateComponents([.month,.day,.isLeapMonth], from: day)
+            let lunarDateComponents = lunarCalendar.dateComponents(in: lunarCalendar.timeZone, from: day)
             let lunarMonth = lunarDateComponents.month ?? 1
             let lunarDay = lunarDateComponents.day ?? 1
             let lunarLeapMonth = lunarDateComponents.isLeapMonth

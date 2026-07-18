@@ -14,7 +14,7 @@ struct SettingsLaunchAtLoginView: View {
         Form {
             Section {
                 Toggle("开机时自动启动", isOn: $launchAtLogin)
-                    .onChange(of: launchAtLogin) { _, newValue in
+                    .onChange(of: launchAtLogin) { newValue in
                         LaunchAtLoginManager.setLaunchAtLogin(enabled: newValue)
                     }
             } footer: {

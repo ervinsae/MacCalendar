@@ -61,8 +61,8 @@ private struct SettingsBrandFooter: View {
                         .foregroundStyle(.tertiary)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .center)
-            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
             .padding(.vertical, 10)
         }
         .accessibilityElement(children: .combine)

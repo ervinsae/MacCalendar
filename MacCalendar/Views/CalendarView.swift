@@ -358,7 +358,7 @@ struct EditableDateComponent: View {
                     .onSubmit {
                         commitChange()
                     }
-                    .onChange(of: focusState) { oldValue, newValue in
+                    .onChange(of: focusState) { newValue in
                         if newValue != equals {
                             commitChange()
                         }

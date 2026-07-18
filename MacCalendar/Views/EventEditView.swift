@@ -72,7 +72,7 @@ struct EventEditView: View {
                     DatePicker("", selection: $editedEvent.endDate, in: editedEvent.startDate..., displayedComponents: editedEvent.isAllDay ? .date : [.date, .hourAndMinute])
                         .labelsHidden()
                 }
-                .onChange(of: editedEvent.startDate) { _, newStartDate in
+                .onChange(of: editedEvent.startDate) { newStartDate in
                     if newStartDate > editedEvent.endDate {
                         editedEvent.endDate = newStartDate
                     }
